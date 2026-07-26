@@ -20,10 +20,11 @@ var moviesServiceBaseUrl = builder.Configuration["Services:MoviesBaseUrl"]
 var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"]
     ?? builder.Configuration["Cors__AllowedOrigin"]
     ?? throw new InvalidOperationException("Cors:AllowedOrigin is not configured.");
+var localLoopbackOrigin = allowedOrigin.Replace("localhost", "127.0.0.1", StringComparison.OrdinalIgnoreCase);
 
 builder.WebHost.UseUrls(gatewayUrl);
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
-    policy.WithOrigins(allowedOrigin).AllowAnyHeader().AllowAnyMethod()));
+    policy.WithOrigins(allowedOrigin, localLoopbackOrigin).AllowAnyHeader().AllowAnyMethod()));
 builder.Services.AddReverseProxy().LoadFromMemory(
 [
     new RouteConfig

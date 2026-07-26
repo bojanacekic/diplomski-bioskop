@@ -1,1 +1,1 @@
-using Movies.Domain; namespace Movies.Services; public interface IMovieService { Task<IReadOnlyList<MovieResponseDto>> GetActiveAsync(string? search, CancellationToken token); }
+using Movies.Domain; namespace Movies.Services; public interface IMovieService { Task<IReadOnlyList<MovieResponseDto>> GetActiveAsync(string? search, CancellationToken token); Task<MovieResponseDto> CreateAsync(CreateMovieRequestDto request, CancellationToken token); }
