@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import lightLogo from './assets/smart-cinema-logo-light.png';
 import MovieManagementPage from './pages/MovieManagementPage';
+import { ProfilePage, UserManagementPage } from './pages/UserPages';
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
 const emptyRegister = { username: '', email: '', password: '' };
@@ -18,7 +19,10 @@ function App() {
   const [loginForm, setLoginForm] = useState(emptyLogin);
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [session, setSession] = useState(() => JSON.parse(localStorage.getItem('smartCinemaSession') || 'null'));
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [session, setSession] = useState(() => JSON.parse(sessionStorage.getItem('smartCinemaSession') || 'null'));
+  const isCinemaManager = session?.role === 2 || session?.role === 'CinemaManager';
+  const isAdministrator = session?.role === 3 || session?.role === 'Administrator';
 
   const chooseFeaturedMovie = (availableMovies = movies) => {
     if (availableMovies.length > 0) {
@@ -70,7 +74,7 @@ function App() {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(errorText(payload));
 
-      localStorage.setItem('smartCinemaSession', JSON.stringify(payload));
+      sessionStorage.setItem('smartCinemaSession', JSON.stringify(payload));
       setSession(payload);
       setRegisterForm(emptyRegister);
       setLoginForm(emptyLogin);
@@ -83,7 +87,7 @@ function App() {
   };
 
   const signOut = () => {
-    localStorage.removeItem('smartCinemaSession');
+    sessionStorage.removeItem('smartCinemaSession');
     setSession(null);
     setPage('home');
   };
@@ -100,12 +104,12 @@ function App() {
       <button className="logo" onClick={() => setPage('home')}><span className="logo-mark"><img src={lightLogo} alt="Smart Cinema" /></span><span className="logo-text">Smart Cinema</span></button>
       <nav>
         {session
-          ? <><span className="user-name">Hi, {session.username}</span>{[2, 3].includes(session.role) && <button className="header-link" onClick={() => setPage('manage')}>Manage movies</button>}<button className="header-link" onClick={signOut}>Sign out</button></>
+          ? <div className="account-menu"><button className="account-trigger" onClick={() => setAccountMenuOpen((open) => !open)}>Hi, {session.username} <span>⌄</span></button>{accountMenuOpen && <div className="account-dropdown"><button onClick={() => { setPage('profile'); setAccountMenuOpen(false); }}>My profile</button>{(isCinemaManager || isAdministrator) && <button onClick={() => { setPage('manage'); setAccountMenuOpen(false); }}>Manage movies</button>}{isAdministrator && <button onClick={() => { setPage('users'); setAccountMenuOpen(false); }}>Manage users</button>}<button className="signout-menu-item" onClick={signOut}>Sign out</button></div>}</div>
           : <><button className="header-link" onClick={() => goAuth('login')}>Sign in</button><button className="header-cta" onClick={() => goAuth('register')}>Create account</button></>}
       </nav>
     </header>
 
-    {page === 'manage' ? <MovieManagementPage accessToken={session?.accessToken} onBack={() => setPage('home')} onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)} /> : page === 'home' ? <section className="movies-page">
+    {page === 'profile' ? <ProfilePage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'users' ? <UserManagementPage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'manage' ? <MovieManagementPage accessToken={session?.accessToken} onBack={() => setPage('home')} onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)} /> : page === 'home' ? <section className="movies-page">
       <div className="movies-heading">
         <div><p className="eyebrow">SMART CINEMA</p><h1>Find your next<br />great story.</h1><p>Explore films currently playing at Smart Cinema.</p></div>
         <label className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search movies or genres" /></label>

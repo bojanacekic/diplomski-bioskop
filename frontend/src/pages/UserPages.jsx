@@ -1,0 +1,26 @@
+import { useEffect, useState } from 'react';
+
+const api = import.meta.env.VITE_API_GATEWAY_URL;
+const headers = (token) => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` });
+
+export function ProfilePage({ token, onBack }) {
+  const [form, setForm] = useState({ username: '', email: '' });
+  const [message, setMessage] = useState('');
+  useEffect(() => { fetch(`${api}/api/users/me`, { headers: headers(token) }).then((response) => response.json()).then((user) => setForm({ username: user.username, email: user.email })); }, []);
+  const save = async (event) => { event.preventDefault(); const response = await fetch(`${api}/api/users/me`, { method: 'PUT', headers: headers(token), body: JSON.stringify(form) }); setMessage(response.ok ? 'Profile updated.' : 'Profile could not be updated.'); };
+  return <section className="management-page"><div className="management-heading"><div><p className="eyebrow">MY ACCOUNT</p><h1>My profile.</h1></div><button className="header-link" onClick={onBack}>← Back to movies</button></div><div className="profile-layout"><form className="movie-form profile-form" onSubmit={save}><p className="eyebrow">PERSONAL DETAILS</p><h2>Account information</h2><p className="profile-help">Keep your personal details current. These details are visible only to you and Smart Cinema administrators.</p><label>Username<input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} required /></label><label>Email address<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>{message && <p className="form-message">{message}</p>}<button className="submit-button">Save changes</button></form></div></section>;
+}
+
+export function UserManagementPage({ token, onBack }) {
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState('');
+  const [editingUser, setEditingUser] = useState(null);
+  const [form, setForm] = useState({ username: '', email: '' });
+  const load = async () => { const response = await fetch(`${api}/api/users?search=${encodeURIComponent(search)}`, { headers: headers(token) }); if (response.ok) setUsers(await response.json()); };
+  useEffect(() => { load(); }, [search]);
+  const changeRole = async (id, role) => { await fetch(`${api}/api/users/${id}/role`, { method: 'PATCH', headers: headers(token), body: JSON.stringify({ role: Number(role) }) }); load(); };
+  const saveUser = async (event) => { event.preventDefault(); await fetch(`${api}/api/users/${editingUser.id}`, { method: 'PUT', headers: headers(token), body: JSON.stringify(form) }); setEditingUser(null); load(); };
+  const deactivate = async (id) => { if (window.confirm('Deactivate this user?')) { await fetch(`${api}/api/users/${id}/deactivate`, { method: 'PATCH', headers: headers(token) }); load(); } };
+  const openEdit = (user) => { setEditingUser(user); setForm({ username: user.username, email: user.email }); };
+  return <section className="management-page"><div className="management-heading"><div><p className="eyebrow">ADMINISTRATION</p><h1>Manage users.</h1></div><button className="header-link" onClick={onBack}>← Back to movies</button></div><label className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search username or email" /></label><div className="management-list user-list">{users.map((user) => <article className="manage-card" key={user.id}><div><p className="eyebrow">{user.isActive ? 'ACTIVE' : 'DEACTIVATED'}</p><h2>{user.username}</h2><p>{user.email}</p></div><div className="manage-actions"><button className="secondary-button" onClick={() => openEdit(user)}>Edit</button><select value={user.role} onChange={(event) => changeRole(user.id, event.target.value)}><option value="1">Registered user</option><option value="2">Cinema manager</option><option value="3">Administrator</option></select>{user.isActive && <button className="danger-button" onClick={() => deactivate(user.id)}>Deactivate</button>}</div></article>)}</div>{editingUser && <div className="modal-backdrop"><form className="user-modal" onSubmit={saveUser}><button type="button" className="modal-close" onClick={() => setEditingUser(null)}>×</button><p className="eyebrow">EDIT USER</p><h2>{editingUser.username}</h2><label>Username<input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} required /></label><label>Email address<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label><div className="form-actions"><button className="submit-button">Save changes</button><button type="button" className="secondary-button" onClick={() => setEditingUser(null)}>Cancel</button></div></form></div>}</section>;
+}

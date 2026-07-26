@@ -33,6 +33,12 @@ builder.Services.AddReverseProxy().LoadFromMemory(
         ClusterId = "auth-cluster",
         Match = new RouteMatch { Path = "/api/auth/{**catch-all}" }
     },
+    new RouteConfig
+    {
+        RouteId = "users-route",
+        ClusterId = "auth-cluster",
+        Match = new RouteMatch { Path = "/api/users/{**catch-all}" }
+    },
     new RouteConfig { RouteId = "movies-route", ClusterId = "movies-cluster", Match = new RouteMatch { Path = "/api/movies/{**catch-all}" } }
 ],
 [
