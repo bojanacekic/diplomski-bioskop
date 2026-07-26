@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import lightLogo from './assets/smart-cinema-logo-light.png';
+import MovieManagementPage from './MovieManagementPage';
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
 const emptyRegister = { username: '', email: '', password: '' };
@@ -9,6 +10,7 @@ function App() {
   const [page, setPage] = useState('home');
   const [authMode, setAuthMode] = useState('login');
   const [movies, setMovies] = useState([]);
+  const [moviesRefreshKey, setMoviesRefreshKey] = useState(0);
   const [featuredMovie, setFeaturedMovie] = useState(null);
   const [moviesState, setMoviesState] = useState('loading');
   const [search, setSearch] = useState('');
@@ -46,7 +48,7 @@ function App() {
 
     const timeout = setTimeout(loadMovies, 200);
     return () => { clearTimeout(timeout); controller.abort(); };
-  }, [search]);
+  }, [search, moviesRefreshKey]);
 
   const changeForm = (setter) => (event) => setter((state) => ({ ...state, [event.target.name]: event.target.value }));
   const errorText = (payload) => payload?.detail ?? Object.values(payload?.errors ?? {}).flat().join(' ') ?? 'The request could not be completed.';
@@ -98,12 +100,12 @@ function App() {
       <button className="logo" onClick={() => setPage('home')}><span className="logo-mark"><img src={lightLogo} alt="Smart Cinema" /></span><span className="logo-text">Smart Cinema</span></button>
       <nav>
         {session
-          ? <><span className="user-name">Hi, {session.username}</span><button className="header-link" onClick={signOut}>Sign out</button></>
+          ? <><span className="user-name">Hi, {session.username}</span><button className="header-link" onClick={() => setPage('manage')}>Manage movies</button><button className="header-link" onClick={signOut}>Sign out</button></>
           : <><button className="header-link" onClick={() => goAuth('login')}>Sign in</button><button className="header-cta" onClick={() => goAuth('register')}>Create account</button></>}
       </nav>
     </header>
 
-    {page === 'home' ? <section className="movies-page">
+    {page === 'manage' ? <MovieManagementPage onBack={() => setPage('home')} onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)} /> : page === 'home' ? <section className="movies-page">
       <div className="movies-heading">
         <div><p className="eyebrow">SMART CINEMA</p><h1>Find your next<br />great story.</h1><p>Explore films currently playing at Smart Cinema.</p></div>
         <label className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search movies or genres" /></label>
