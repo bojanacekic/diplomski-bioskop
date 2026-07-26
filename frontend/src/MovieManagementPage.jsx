@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
+import { validateMovieForm } from './utils/movieValidation';
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
 const emptyForm = { title: '', description: '', genre: '', durationMinutes: '', premiereDate: '', ageRating: 'Not rated', posterBase64: null };
+const formatDate = (value) => new Intl.DateTimeFormat('sr-RS', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(`${value}T00:00:00`));
 
 export default function MovieManagementPage({ onBack, onMoviesChanged }) {
   const [movies, setMovies] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState('');
+  const [errors, setErrors] = useState({});
 
   const loadMovies = async () => {
     const response = await fetch(`${apiUrl}/api/movies`);
@@ -16,7 +19,11 @@ export default function MovieManagementPage({ onBack, onMoviesChanged }) {
 
   useEffect(() => { loadMovies(); }, []);
 
-  const updateField = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  const updateField = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+    setErrors((current) => ({ ...current, [name]: '' }));
+  };
   const uploadPoster = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -35,6 +42,11 @@ export default function MovieManagementPage({ onBack, onMoviesChanged }) {
   const submit = async (event) => {
     event.preventDefault();
     setMessage('');
+    const validationErrors = validateMovieForm(form);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return setMessage('Please correct the highlighted fields.');
+    }
     const payload = { ...form, durationMinutes: Number(form.durationMinutes), ...(editingId ? {} : { status: 0 }) };
     const response = await fetch(`${apiUrl}/api/movies${editingId ? `/${editingId}` : ''}`, {
       method: editingId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
@@ -63,18 +75,18 @@ export default function MovieManagementPage({ onBack, onMoviesChanged }) {
     <div className="management-layout">
       <form className="movie-form" onSubmit={submit}>
         <h2>{editingId ? 'Edit movie' : 'Add a movie'}</h2>
-        <label>Title<input name="title" value={form.title} onChange={updateField} required /></label>
-        <label>Genre<input name="genre" value={form.genre} onChange={updateField} required /></label>
-        <div className="form-row"><label>Duration (min)<input name="durationMinutes" type="number" min="1" value={form.durationMinutes} onChange={updateField} required /></label><label>Premiere date<input name="premiereDate" type="date" value={form.premiereDate} onChange={updateField} required /></label></div>
-        <label>Age rating<input name="ageRating" value={form.ageRating} onChange={updateField} required /></label>
-        <label>Description<textarea name="description" value={form.description} onChange={updateField} required /></label>
+        <label>Title<input className={errors.title ? 'invalid-field' : ''} name="title" value={form.title} onChange={updateField} required />{errors.title && <small className="field-error">{errors.title}</small>}</label>
+        <label>Genre<input className={errors.genre ? 'invalid-field' : ''} name="genre" value={form.genre} onChange={updateField} required />{errors.genre && <small className="field-error">{errors.genre}</small>}</label>
+        <div className="form-row"><label>Duration (min)<input className={errors.durationMinutes ? 'invalid-field' : ''} name="durationMinutes" type="number" min="1" value={form.durationMinutes} onChange={updateField} required />{errors.durationMinutes && <small className="field-error">{errors.durationMinutes}</small>}</label><label>Premiere date<input className={errors.premiereDate ? 'invalid-field' : ''} name="premiereDate" type="date" value={form.premiereDate} onChange={updateField} required />{errors.premiereDate && <small className="field-error">{errors.premiereDate}</small>}</label></div>
+        <label>Age rating<input className={errors.ageRating ? 'invalid-field' : ''} name="ageRating" value={form.ageRating} onChange={updateField} required />{errors.ageRating && <small className="field-error">{errors.ageRating}</small>}</label>
+        <label>Description<textarea className={errors.description ? 'invalid-field' : ''} name="description" value={form.description} onChange={updateField} required />{errors.description && <small className="field-error">{errors.description}</small>}</label>
         <label>Horizontal poster<input type="file" accept="image/*" onChange={uploadPoster} /></label>
         {message && <p className="form-message">{message}</p>}
         <div className="form-actions"><button className="submit-button">{editingId ? 'Save changes' : 'Add movie'}</button>{editingId && <button type="button" className="secondary-button" onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}</div>
       </form>
       <div className="management-list">
         {movies.map((movie) => <article className="manage-card" key={movie.id}>
-          <div><p className="eyebrow">{['Upcoming', 'Active', 'Withdrawn'][movie.status]}</p><h2>{movie.title}</h2><p>{movie.genre} · {movie.durationMinutes} min · {movie.premiereDate}</p></div>
+          <div><p className="eyebrow">{['Upcoming', 'Active', 'Withdrawn'][movie.status]}</p><h2>{movie.title}</h2><p>{movie.genre} · {movie.durationMinutes} min · {formatDate(movie.premiereDate)}</p></div>
           <div className="manage-actions"><button className="secondary-button" onClick={() => editMovie(movie)}>Edit</button>{movie.status === 0 && <button className="secondary-button" onClick={() => changeStatus(movie.id, 1)}>Set active</button>}{movie.status === 1 && <button className="secondary-button" onClick={() => changeStatus(movie.id, 0)}>Set upcoming</button>}<button className="danger-button" onClick={() => withdrawMovie(movie.id)}>Withdraw</button></div>
         </article>)}
       </div>

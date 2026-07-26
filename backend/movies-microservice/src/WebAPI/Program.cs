@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Movies.Database;
 using Movies.Domain;
 using Movies.Services;
+using Movies.WebAPI.Validators;
 
 Movies.Services.DotEnvReader.Load();
 

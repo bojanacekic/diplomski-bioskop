@@ -1,6 +1,6 @@
 using Movies.Domain;
 
-namespace Movies.Services;
+namespace Movies.WebAPI.Validators;
 
 public interface IMovieRequestValidator
 {

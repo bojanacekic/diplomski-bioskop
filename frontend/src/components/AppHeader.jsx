@@ -1,0 +1,3 @@
+export default function AppHeader({ session, onHome, onAuth, onManage, onSignOut }) {
+  return <header className="topbar"><button className="logo" onClick={onHome}>Smart Cinema</button><nav>{session ? <><span className="user-name">Hi, {session.username}</span><button className="header-link" onClick={onManage}>Manage movies</button><button className="header-link" onClick={onSignOut}>Sign out</button></> : <><button className="header-link" onClick={() => onAuth('login')}>Sign in</button><button className="header-cta" onClick={() => onAuth('register')}>Create account</button></>}</nav></header>;
+}

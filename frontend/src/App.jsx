@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import lightLogo from './assets/smart-cinema-logo-light.png';
-import MovieManagementPage from './MovieManagementPage';
+import MovieManagementPage from './pages/MovieManagementPage';
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
 const emptyRegister = { username: '', email: '', password: '' };
