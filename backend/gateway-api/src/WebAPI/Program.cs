@@ -14,6 +14,9 @@ var gatewayUrl = builder.Configuration["Gateway:Url"]
 var authServiceBaseUrl = builder.Configuration["Services:AuthBaseUrl"]
     ?? builder.Configuration["Services__AuthBaseUrl"]
     ?? throw new InvalidOperationException("Services:AuthBaseUrl is not configured.");
+var moviesServiceBaseUrl = builder.Configuration["Services:MoviesBaseUrl"]
+    ?? builder.Configuration["Services__MoviesBaseUrl"]
+    ?? throw new InvalidOperationException("Services:MoviesBaseUrl is not configured.");
 var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"]
     ?? builder.Configuration["Cors__AllowedOrigin"]
     ?? throw new InvalidOperationException("Cors:AllowedOrigin is not configured.");
@@ -28,7 +31,8 @@ builder.Services.AddReverseProxy().LoadFromMemory(
         RouteId = "auth-route",
         ClusterId = "auth-cluster",
         Match = new RouteMatch { Path = "/api/auth/{**catch-all}" }
-    }
+    },
+    new RouteConfig { RouteId = "movies-route", ClusterId = "movies-cluster", Match = new RouteMatch { Path = "/api/movies/{**catch-all}" } }
 ],
 [
     new ClusterConfig
@@ -38,7 +42,8 @@ builder.Services.AddReverseProxy().LoadFromMemory(
         {
             ["auth-service"] = new() { Address = $"{authServiceBaseUrl.TrimEnd('/')}/" }
         }
-    }
+    },
+    new ClusterConfig { ClusterId = "movies-cluster", Destinations = new Dictionary<string, DestinationConfig> { ["movies-service"] = new() { Address = $"{moviesServiceBaseUrl.TrimEnd('/')}/" } } }
 ]);
 
 var app = builder.Build();

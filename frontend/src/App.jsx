@@ -1,134 +1,72 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-const apiUrl = import.meta.env.VITE_AUTH_API_URL;
-
-const initialRegisterForm = { username: '', email: '', password: '' };
-const initialLoginForm = { usernameOrEmail: '', password: '' };
+const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
+const emptyRegister = { username: '', email: '', password: '' };
+const emptyLogin = { usernameOrEmail: '', password: '' };
 
 function App() {
-  const [mode, setMode] = useState('register');
-  const [registerForm, setRegisterForm] = useState(initialRegisterForm);
-  const [loginForm, setLoginForm] = useState(initialLoginForm);
+  const [page, setPage] = useState('home');
+  const [authMode, setAuthMode] = useState('login');
+  const [movies, setMovies] = useState([]);
+  const [moviesState, setMoviesState] = useState('loading');
+  const [search, setSearch] = useState('');
+  const [registerForm, setRegisterForm] = useState(emptyRegister);
+  const [loginForm, setLoginForm] = useState(emptyLogin);
   const [message, setMessage] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [session, setSession] = useState(() => {
-    const savedSession = localStorage.getItem('smartCinemaSession');
-    return savedSession ? JSON.parse(savedSession) : null;
-  });
+  const [submitting, setSubmitting] = useState(false);
+  const [session, setSession] = useState(() => JSON.parse(localStorage.getItem('smartCinemaSession') || 'null'));
 
-  const updateForm = (formSetter) => (event) => {
-    const { name, value } = event.target;
-    formSetter((current) => ({ ...current, [name]: value }));
-  };
-
-  const submit = async (event) => {
-    event.preventDefault();
-    if (!apiUrl) {
-      setMessage({ type: 'error', text: 'The auth API URL is not configured.' });
-      return;
-    }
-
-    const isRegistration = mode === 'register';
-    const path = isRegistration ? '/api/auth/register' : '/api/auth/login';
-    const requestBody = isRegistration ? registerForm : loginForm;
-
-    setIsSubmitting(true);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`${apiUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
-      let payload = {};
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadMovies = async () => {
+      if (!apiUrl) return setMoviesState('error');
+      setMoviesState('loading');
       try {
-        payload = await response.json();
-      } catch {
-        payload = {};
+        const query = search ? `?search=${encodeURIComponent(search)}` : '';
+        const response = await fetch(`${apiUrl}/api/movies${query}`, { signal: controller.signal });
+        if (!response.ok) throw new Error();
+        setMovies(await response.json());
+        setMoviesState('ready');
+      } catch (error) {
+        if (error.name !== 'AbortError') setMoviesState('error');
       }
+    };
+    const timeout = setTimeout(loadMovies, 200);
+    return () => { clearTimeout(timeout); controller.abort(); };
+  }, [search]);
 
-      if (!response.ok) {
-        const validationErrors = Object.values(payload.errors ?? {}).flat().join(' ');
-        throw new Error(payload.detail ?? validationErrors ?? 'The request could not be completed.');
-      }
+  const changeForm = (setter) => (event) => setter((state) => ({ ...state, [event.target.name]: event.target.value }));
+  const errorText = (payload) => payload?.detail ?? Object.values(payload?.errors ?? {}).flat().join(' ') ?? 'The request could not be completed.';
 
+  const submitAuth = async (event) => {
+    event.preventDefault();
+    if (!apiUrl) return setMessage({ type: 'error', text: 'The API Gateway URL is not configured.' });
+    setSubmitting(true); setMessage(null);
+    const registering = authMode === 'register';
+    try {
+      const response = await fetch(`${apiUrl}/api/auth/${registering ? 'register' : 'login'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(registering ? registerForm : loginForm) });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(errorText(payload));
       localStorage.setItem('smartCinemaSession', JSON.stringify(payload));
-      setSession(payload);
-      setMessage({ type: 'success', text: `Welcome, ${payload.username}. You are now signed in.` });
-      setRegisterForm(initialRegisterForm);
-      setLoginForm(initialLoginForm);
-    } catch (error) {
-      setMessage({ type: 'error', text: error.message ?? 'Unable to contact the auth service.' });
-    } finally {
-      setIsSubmitting(false);
-    }
+      setSession(payload); setRegisterForm(emptyRegister); setLoginForm(emptyLogin); setPage('home');
+    } catch (error) { setMessage({ type: 'error', text: error.message }); }
+    finally { setSubmitting(false); }
   };
 
-  const signOut = () => {
-    localStorage.removeItem('smartCinemaSession');
-    setSession(null);
-    setMessage({ type: 'success', text: 'You have been signed out.' });
-  };
+  const signOut = () => { localStorage.removeItem('smartCinemaSession'); setSession(null); setPage('home'); };
+  const goAuth = (mode) => { setAuthMode(mode); setMessage(null); setPage('auth'); };
 
-  return (
-    <main className="page-shell">
-      <section className="hero-panel">
-        <div className="brand"><span className="brand-mark">SC</span> Smart Cinema</div>
-        <p className="eyebrow">YOUR MOVIE NIGHT, SIMPLIFIED</p>
-        <h1>Stories begin<br />with a seat.</h1>
-        <p className="hero-copy">Create your account to reserve the best seats, keep your tickets in one place and receive movie recommendations.</p>
-        <div className="feature-list">
-          <div><span>01</span> Reserve seats in seconds</div>
-          <div><span>02</span> Store tickets securely</div>
-          <div><span>03</span> Discover your next favorite film</div>
-        </div>
-      </section>
+  return <main className="site-shell">
+    <header className="topbar">
+      <button className="logo" onClick={() => setPage('home')}><span>SC</span> Smart Cinema</button>
+      <nav>{session ? <><span className="user-name">Hi, {session.username}</span><button className="header-link" onClick={signOut}>Sign out</button></> : <><button className="header-link" onClick={() => goAuth('login')}>Sign in</button><button className="header-cta" onClick={() => goAuth('register')}>Create account</button></>}</nav>
+    </header>
 
-      <section className="auth-panel">
-        {session ? (
-          <div className="session-card">
-            <div className="session-icon">✓</div>
-            <p className="eyebrow">SIGNED IN</p>
-            <h2>Hello, {session.username}</h2>
-            <p>Your account is ready. Movie listings and reservations will appear here as the next services are connected.</p>
-            <div className="role-badge">{session.role}</div>
-            <button className="secondary-button" onClick={signOut}>Sign out</button>
-          </div>
-        ) : (
-          <div className="form-container">
-            <p className="eyebrow">WELCOME TO SMART CINEMA</p>
-            <h2>{mode === 'register' ? 'Create your account' : 'Welcome back'}</h2>
-            <p className="form-intro">{mode === 'register' ? 'Start your cinema experience today.' : 'Sign in to continue to your account.'}</p>
-
-            <div className="mode-switch" role="tablist" aria-label="Authentication mode">
-              <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Create account</button>
-              <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>Sign in</button>
-            </div>
-
-            <form onSubmit={submit}>
-              {mode === 'register' && (
-                <label>
-                  Username
-                  <input name="username" value={registerForm.username} onChange={updateForm(setRegisterForm)} placeholder="e.g. mila.petrovic" autoComplete="username" required />
-                </label>
-              )}
-              <label>
-                {mode === 'register' ? 'Email address' : 'Username or email'}
-                <input name={mode === 'register' ? 'email' : 'usernameOrEmail'} type={mode === 'register' ? 'email' : 'text'} value={mode === 'register' ? registerForm.email : loginForm.usernameOrEmail} onChange={updateForm(mode === 'register' ? setRegisterForm : setLoginForm)} placeholder={mode === 'register' ? 'you@example.com' : 'Your username or email'} autoComplete="email" required />
-              </label>
-              <label>
-                Password
-                <input name="password" type="password" value={mode === 'register' ? registerForm.password : loginForm.password} onChange={updateForm(mode === 'register' ? setRegisterForm : setLoginForm)} placeholder="Enter your password" autoComplete={mode === 'register' ? 'new-password' : 'current-password'} required />
-              </label>
-              {message && <p className={`message ${message.type}`}>{message.text}</p>}
-              <button className="primary-button" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Please wait...' : mode === 'register' ? 'Create account' : 'Sign in'}</button>
-            </form>
-          </div>
-        )}
-      </section>
-    </main>
-  );
+    {page === 'home' ? <section className="movies-page">
+      <div className="movies-heading"><div><p className="eyebrow">SMART CINEMA</p><h1>Find your next<br />great story.</h1><p>Explore films currently playing at Smart Cinema.</p></div><label className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search movies or genres" /></label></div>
+      <div className="movie-grid">{moviesState === 'loading' && <p className="state-message">Loading films...</p>}{moviesState === 'error' && <p className="state-message error">Movies are currently unavailable. Make sure the Movies service and Gateway are running.</p>}{moviesState === 'ready' && movies.length === 0 && <div className="empty-state"><span className="empty-icon">🎬</span><h2>No films available yet</h2><p>As soon as a cinema manager adds active films, they will appear here.</p></div>}{movies.map((movie) => <article className="movie-card" key={movie.id}>{movie.posterBase64 ? <img src={movie.posterBase64} alt={`${movie.title} poster`} /> : <div className="poster-placeholder"><span>SMART<br />CINEMA</span></div>}<div className="movie-info"><p>{movie.genre} · {movie.durationMinutes} min</p><h2>{movie.title}</h2><span>{movie.ageRating}</span></div></article>)}</div>
+    </section> : <section className="auth-page"><div className="auth-copy"><p className="eyebrow">SMART CINEMA ACCOUNT</p><h1>One account.<br />Every story.</h1><p>Reserve your favorite seats, access your tickets and discover films made for you.</p></div><div className="auth-card"><button className="back-button" onClick={() => setPage('home')}>← Back to movies</button><p className="eyebrow">WELCOME</p><h2>{authMode === 'register' ? 'Create your account' : 'Welcome back'}</h2><div className="mode-switch"><button className={authMode === 'register' ? 'active' : ''} onClick={() => setAuthMode('register')}>Create account</button><button className={authMode === 'login' ? 'active' : ''} onClick={() => setAuthMode('login')}>Sign in</button></div><form onSubmit={submitAuth}>{authMode === 'register' && <label>Username<input name="username" value={registerForm.username} onChange={changeForm(setRegisterForm)} required /></label>}<label>{authMode === 'register' ? 'Email address' : 'Username or email'}<input name={authMode === 'register' ? 'email' : 'usernameOrEmail'} type={authMode === 'register' ? 'email' : 'text'} value={authMode === 'register' ? registerForm.email : loginForm.usernameOrEmail} onChange={changeForm(authMode === 'register' ? setRegisterForm : setLoginForm)} required /></label><label>Password<input name="password" type="password" value={authMode === 'register' ? registerForm.password : loginForm.password} onChange={changeForm(authMode === 'register' ? setRegisterForm : setLoginForm)} required /></label>{message && <p className="form-error">{message.text}</p>}<button className="submit-button" disabled={submitting}>{submitting ? 'Please wait...' : authMode === 'register' ? 'Create account' : 'Sign in'}</button></form></div></section>}
+  </main>;
 }
 
 export default App;
