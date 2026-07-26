@@ -5,7 +5,7 @@ const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
 const emptyForm = { title: '', description: '', genre: '', durationMinutes: '', premiereDate: '', ageRating: 'Not rated', posterBase64: null };
 const formatDate = (value) => new Intl.DateTimeFormat('sr-RS', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(`${value}T00:00:00`));
 
-export default function MovieManagementPage({ onBack, onMoviesChanged }) {
+export default function MovieManagementPage({ accessToken, onBack, onMoviesChanged }) {
   const [movies, setMovies] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -49,7 +49,7 @@ export default function MovieManagementPage({ onBack, onMoviesChanged }) {
     }
     const payload = { ...form, durationMinutes: Number(form.durationMinutes), ...(editingId ? {} : { status: 0 }) };
     const response = await fetch(`${apiUrl}/api/movies${editingId ? `/${editingId}` : ''}`, {
-      method: editingId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      method: editingId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(payload)
     });
     if (!response.ok) return setMessage('Please check all required movie details.');
     setForm(emptyForm); setEditingId(null); setMessage(editingId ? 'Movie updated.' : 'Movie added.');
@@ -58,7 +58,7 @@ export default function MovieManagementPage({ onBack, onMoviesChanged }) {
   };
 
   const changeStatus = async (id, status) => {
-    const response = await fetch(`${apiUrl}/api/movies/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    const response = await fetch(`${apiUrl}/api/movies/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` }, body: JSON.stringify({ status }) });
     setMessage(response.ok ? 'Movie status updated.' : 'This status transition is not allowed.');
     await loadMovies();
     onMoviesChanged();
@@ -66,7 +66,7 @@ export default function MovieManagementPage({ onBack, onMoviesChanged }) {
 
   const withdrawMovie = async (id) => {
     if (!window.confirm('Withdraw this movie from the public catalogue?')) return;
-    const response = await fetch(`${apiUrl}/api/movies/${id}`, { method: 'DELETE' });
+    const response = await fetch(`${apiUrl}/api/movies/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } });
     if (response.ok) { setMessage('Movie withdrawn.'); await loadMovies(); onMoviesChanged(); }
   };
 

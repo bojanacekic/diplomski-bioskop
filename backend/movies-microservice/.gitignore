@@ -3,3 +3,4 @@ bin/
 obj/
 temp-build/
 validation-build/
+authorization-build/

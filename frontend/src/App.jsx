@@ -100,12 +100,12 @@ function App() {
       <button className="logo" onClick={() => setPage('home')}><span className="logo-mark"><img src={lightLogo} alt="Smart Cinema" /></span><span className="logo-text">Smart Cinema</span></button>
       <nav>
         {session
-          ? <><span className="user-name">Hi, {session.username}</span><button className="header-link" onClick={() => setPage('manage')}>Manage movies</button><button className="header-link" onClick={signOut}>Sign out</button></>
+          ? <><span className="user-name">Hi, {session.username}</span>{[2, 3].includes(session.role) && <button className="header-link" onClick={() => setPage('manage')}>Manage movies</button>}<button className="header-link" onClick={signOut}>Sign out</button></>
           : <><button className="header-link" onClick={() => goAuth('login')}>Sign in</button><button className="header-cta" onClick={() => goAuth('register')}>Create account</button></>}
       </nav>
     </header>
 
-    {page === 'manage' ? <MovieManagementPage onBack={() => setPage('home')} onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)} /> : page === 'home' ? <section className="movies-page">
+    {page === 'manage' ? <MovieManagementPage accessToken={session?.accessToken} onBack={() => setPage('home')} onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)} /> : page === 'home' ? <section className="movies-page">
       <div className="movies-heading">
         <div><p className="eyebrow">SMART CINEMA</p><h1>Find your next<br />great story.</h1><p>Explore films currently playing at Smart Cinema.</p></div>
         <label className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search movies or genres" /></label>
