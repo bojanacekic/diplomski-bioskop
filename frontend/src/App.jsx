@@ -79,6 +79,7 @@ function App() {
 
       sessionStorage.setItem('smartCinemaSession', JSON.stringify(payload));
       setSession(payload);
+      setAccountMenuOpen(false);
       setRegisterForm(emptyRegister);
       setLoginForm(emptyLogin);
       setPage('home');
@@ -92,6 +93,7 @@ function App() {
   const signOut = () => {
     sessionStorage.removeItem('smartCinemaSession');
     setSession(null);
+    setAccountMenuOpen(false);
     setPage('home');
   };
 
