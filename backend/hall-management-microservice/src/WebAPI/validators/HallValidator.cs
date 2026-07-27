@@ -1,1 +1,18 @@
-using Halls.Domain; namespace Halls.WebAPI.Validators; public static class HallValidator{public static Dictionary<string,string[]> Validate(CreateHallRequestDto r){var e=new Dictionary<string,string[]>();if(string.IsNullOrWhiteSpace(r.Name))e["name"]=["Name is required."];if(r.Rows<1||r.Rows>30)e["rows"]=["Rows must be between 1 and 30."];if(r.SeatsPerRow<1||r.SeatsPerRow>50)e["seatsPerRow"]=["Seats per row must be between 1 and 50."];return e;}}
+using Halls.Domain;
+
+namespace Halls.WebAPI.Validators;
+
+public static class HallValidator
+{
+    public static Dictionary<string, string[]> Validate(CreateHallRequestDto request) => Validate(request.Name, request.Rows, request.SeatsPerRow);
+    public static Dictionary<string, string[]> Validate(UpdateHallRequestDto request) => Validate(request.Name, request.Rows, request.SeatsPerRow);
+
+    private static Dictionary<string, string[]> Validate(string name, int rows, int seatsPerRow)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (string.IsNullOrWhiteSpace(name)) errors["name"] = ["Name is required."];
+        if (rows < 1 || rows > 30) errors["rows"] = ["Rows must be between 1 and 30."];
+        if (seatsPerRow < 1 || seatsPerRow > 50) errors["seatsPerRow"] = ["Seats per row must be between 1 and 50."];
+        return errors;
+    }
+}
