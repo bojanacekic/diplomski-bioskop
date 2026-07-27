@@ -37,8 +37,9 @@ export default function MovieManagementPage({ accessToken, onBack, onMoviesChang
     setEditingId(movie.id);
     setForm({ ...movie, premiereDate: movie.premiereDate.slice(0, 10) });
     setMessage(`Editing ${movie.title}`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const newMovie = () => { setEditingId(null); setForm(emptyForm); setErrors({}); setMessage(''); };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -68,14 +69,14 @@ export default function MovieManagementPage({ accessToken, onBack, onMoviesChang
   const withdrawMovie = async (id) => {
     if (!window.confirm('Withdraw this movie from the public catalogue?')) return;
     const response = await fetch(`${apiUrl}/api/movies/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } });
-    if (response.ok) { setMessage('Movie withdrawn.'); await loadMovies(); onMoviesChanged(); }
+    if (response.ok) { newMovie(); setMessage('Movie withdrawn.'); await loadMovies(); onMoviesChanged(); }
   };
 
   return <section className="management-page">
-    <div className="management-heading"><div><p className="eyebrow">CINEMA MANAGER</p><h1>Manage films.</h1><p>Add a new movie, edit its details or update its cinema status.</p></div><button className="header-link" onClick={onBack}>← Back to movies</button></div>
+    <div className="management-heading"><div><p className="eyebrow">CINEMA MANAGER</p><h1>Manage films</h1><p>Add a new movie, edit its details or update its cinema status.</p></div><button className="header-link" onClick={onBack}>← Back to movies</button></div>
     <div className="management-layout">
       <form className="movie-form" onSubmit={submit}>
-        <h2>{editingId ? 'Edit movie' : 'Add a movie'}</h2>
+        <div className="form-title-row"><h2>{editingId ? 'Edit movie' : 'Add a movie'}</h2><button type="button" className="secondary-button" onClick={newMovie}>New movie</button></div>
         <label>Title<input className={errors.title ? 'invalid-field' : ''} name="title" value={form.title} onChange={updateField} required />{errors.title && <small className="field-error">{errors.title}</small>}</label>
         <label>Genre<input className={errors.genre ? 'invalid-field' : ''} name="genre" value={form.genre} onChange={updateField} required />{errors.genre && <small className="field-error">{errors.genre}</small>}</label>
         <div className="form-row"><label>Duration (min)<input className={errors.durationMinutes ? 'invalid-field' : ''} name="durationMinutes" type="number" min="1" value={form.durationMinutes} onChange={updateField} required />{errors.durationMinutes && <small className="field-error">{errors.durationMinutes}</small>}</label><label>Premiere date<input className={errors.premiereDate ? 'invalid-field' : ''} name="premiereDate" type="date" value={form.premiereDate} onChange={updateField} required />{errors.premiereDate && <small className="field-error">{errors.premiereDate}</small>}</label></div>
@@ -83,12 +84,12 @@ export default function MovieManagementPage({ accessToken, onBack, onMoviesChang
         <label>Description<textarea className={errors.description ? 'invalid-field' : ''} name="description" value={form.description} onChange={updateField} required />{errors.description && <small className="field-error">{errors.description}</small>}</label>
         <label>Horizontal poster<input type="file" accept="image/*" onChange={uploadPoster} /></label>
         {message && <p className="form-message">{message}</p>}
-        <div className="form-actions"><button className="submit-button">{editingId ? 'Save changes' : 'Add movie'}</button>{editingId && <button type="button" className="secondary-button" onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}</div>
+        <div className="form-actions"><button className="submit-button">{editingId ? 'Save changes' : 'Add movie'}</button>{editingId && <><button type="button" className="secondary-button" onClick={newMovie}>Cancel</button><button type="button" className="danger-button" onClick={() => withdrawMovie(editingId)}>Withdraw</button></>}</div>
       </form>
       <div><label className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search movies by name or genre" /></label><div className="management-list user-list">
-        {movies.map((movie) => <article className="manage-card" key={movie.id}>
+        {movies.map((movie) => <article className="manage-card clickable-card" key={movie.id} onClick={() => editMovie(movie)}>
           <div><p className="eyebrow">{['Upcoming', 'Active', 'Withdrawn'][movie.status]}</p><h2>{movie.title}</h2><p>{movie.genre} · {movie.durationMinutes} min · {formatDate(movie.premiereDate)}</p></div>
-          <div className="manage-actions"><button className="secondary-button" onClick={() => editMovie(movie)}>Edit</button>{movie.status === 0 && <button className="secondary-button" onClick={() => changeStatus(movie.id, 1)}>Set active</button>}{movie.status === 1 && <button className="secondary-button" onClick={() => changeStatus(movie.id, 0)}>Set upcoming</button>}<button className="danger-button" onClick={() => withdrawMovie(movie.id)}>Withdraw</button></div>
+          <div className="manage-actions">{movie.status === 0 && <button className="secondary-button" onClick={(event) => { event.stopPropagation(); changeStatus(movie.id, 1); }}>Set active</button>}{movie.status === 1 && <button className="secondary-button" onClick={(event) => { event.stopPropagation(); changeStatus(movie.id, 0); }}>Set upcoming</button>}</div>
         </article>)}
       </div></div>
     </div>
