@@ -1,4 +1,7 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Screenings.Database;
 using Screenings.Domain;
 using Screenings.Services;
@@ -14,6 +17,9 @@ var screeningsUrl =
     ?? builder.Configuration["Screenings__Url"]
     ?? "http://localhost:5004";
 builder.WebHost.UseUrls(screeningsUrl);
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? builder.Configuration["Jwt__Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? builder.Configuration["Jwt__Audience"] ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? builder.Configuration["Jwt__SecretKey"] ?? throw new InvalidOperationException("Jwt:SecretKey is not configured.");
 var connection =
     builder.Configuration.GetConnectionString("ScreeningsDatabase")
     ?? Environment.GetEnvironmentVariable("ConnectionStrings__ScreeningsDatabase")
@@ -22,6 +28,8 @@ var connection =
     );
 builder.Services.AddDbContext<ScreeningsDbContext>(o => o.UseSqlServer(connection));
 builder.Services.AddScoped<IScreeningService, ScreeningService>();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidIssuer = jwtIssuer, ValidateAudience = true, ValidAudience = jwtAudience, ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)), ValidateLifetime = true });
+builder.Services.AddAuthorization(options => options.AddPolicy("ScreeningManagement", policy => policy.RequireRole("CinemaManager", "Administrator")));
 builder.Services.AddCors(o =>
     o.AddDefaultPolicy(p =>
         p.WithOrigins(builder.Configuration["Cors:AllowedOrigin"] ?? "http://localhost:5173")
@@ -35,6 +43,8 @@ using (var scope = app.Services.CreateScope())
         .ServiceProvider.GetRequiredService<ScreeningsDbContext>()
         .Database.EnsureCreatedAsync();
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapGet(
     "/api/screenings",
     async (DateOnly? date, IScreeningService s, CancellationToken t) =>
@@ -54,7 +64,7 @@ app.MapPost(
         var screening = await s.CreateAsync(r, t);
         return Results.Created($"/api/screenings/{screening.Id}", screening);
     }
-);
+).RequireAuthorization("ScreeningManagement");
 app.MapPut(
     "/api/screenings/{id:guid}",
     async (Guid id, UpdateScreeningRequestDto r, IScreeningService s, CancellationToken t) =>
@@ -69,10 +79,10 @@ app.MapPut(
         var screening = await s.UpdateAsync(id, r, t);
         return screening is null ? Results.NotFound() : Results.Ok(screening);
     }
-);
+).RequireAuthorization("ScreeningManagement");
 app.MapDelete(
     "/api/screenings/{id:guid}",
     async (Guid id, IScreeningService s, CancellationToken t) =>
         await s.DeleteAsync(id, t) ? Results.NoContent() : Results.NotFound()
-);
+).RequireAuthorization("ScreeningManagement");
 app.Run();

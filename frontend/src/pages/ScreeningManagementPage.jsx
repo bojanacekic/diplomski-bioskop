@@ -4,7 +4,7 @@ const api = import.meta.env.VITE_API_GATEWAY_URL;
 const empty = { movieId: "", hallId: "", startsAtUtc: "", baseTicketPrice: "" };
 const statusNames = ["SCHEDULED", "ACTIVE", "COMPLETED", "CANCELLED"];
 
-export default function ScreeningManagementPage({ onBack }) {
+export default function ScreeningManagementPage({ accessToken, onBack }) {
   const [movies, setMovies] = useState([]);
   const [halls, setHalls] = useState([]);
   const [screenings, setScreenings] = useState([]);
@@ -57,7 +57,7 @@ export default function ScreeningManagementPage({ onBack }) {
       `${api}/api/screenings${editing ? `/${editing.id}` : ""}`,
       {
         method: editing ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({
           ...form,
           startsAtUtc: start.toISOString(),
@@ -80,6 +80,7 @@ export default function ScreeningManagementPage({ onBack }) {
     if (!editing || !window.confirm("Delete this screening?")) return;
     const response = await fetch(`${api}/api/screenings/${editing.id}`, {
       method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (response.ok) {
       newScreening();

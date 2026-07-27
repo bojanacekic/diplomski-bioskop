@@ -230,7 +230,7 @@ function App() {
           onBack={() => setPage("home")}
         />
       ) : page === "screenings" ? (
-        <ScreeningManagementPage onBack={() => setPage("home")} />
+        <ScreeningManagementPage accessToken={session?.accessToken} onBack={() => setPage("home")} />
       ) : page === "hall-layout" ? (
         <HallLayoutPage hall={selectedHall} onBack={() => setPage("halls")} />
       ) : page === "halls" ? (
