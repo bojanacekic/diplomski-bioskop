@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 const empty = { name: "", type: 0, rows: "", seatsPerRow: "" };
 
-export default function HallManagementPage({ onBack, onViewLayout }) {
+export default function HallManagementPage({ accessToken, onBack, onViewLayout }) {
   const [halls, setHalls] = useState([]);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(empty);
@@ -37,6 +37,7 @@ export default function HallManagementPage({ onBack, onViewLayout }) {
     if (!editingId || !window.confirm("Delete this hall?")) return;
     const response = await fetch(`${api}/api/halls/${editingId}`, {
       method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (response.ok) {
       cancelEdit();
@@ -49,7 +50,7 @@ export default function HallManagementPage({ onBack, onViewLayout }) {
       `${api}/api/halls${editingId ? `/${editingId}` : ""}`,
       {
         method: editingId ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({
           ...form,
           type: Number(form.type),

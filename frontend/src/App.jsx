@@ -235,6 +235,7 @@ function App() {
         <HallLayoutPage hall={selectedHall} onBack={() => setPage("halls")} />
       ) : page === "halls" ? (
         <HallManagementPage
+          accessToken={session?.accessToken}
           onBack={() => setPage("home")}
           onViewLayout={(hall) => {
             setSelectedHall(hall);

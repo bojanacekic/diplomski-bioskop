@@ -8,4 +8,7 @@
     <ProjectReference Include="..\Database\Halls.Database.csproj" />
     <ProjectReference Include="..\Services\Halls.Services.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.28" />
+  </ItemGroup>
 </Project>
