@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import lightLogo from './assets/smart-cinema-logo-light.png';
 import MovieManagementPage from './pages/MovieManagementPage';
 import HallManagementPage from './pages/HallManagementPage';
+import HallLayoutPage from './pages/HallLayoutPage';
 import { ProfilePage, UserManagementPage } from './pages/UserPages';
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
@@ -21,6 +22,7 @@ function App() {
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [selectedHall, setSelectedHall] = useState(null);
   const [session, setSession] = useState(() => JSON.parse(sessionStorage.getItem('smartCinemaSession') || 'null'));
   const isCinemaManager = session?.role === 2 || session?.role === 'CinemaManager';
   const isAdministrator = session?.role === 3 || session?.role === 'Administrator';
@@ -110,7 +112,7 @@ function App() {
       </nav>
     </header>
 
-    {page === 'profile' ? <ProfilePage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'users' ? <UserManagementPage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'halls' ? <HallManagementPage onBack={() => setPage('home')} /> : page === 'manage' ? <MovieManagementPage accessToken={session?.accessToken} onBack={() => setPage('home')} onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)} /> : page === 'home' ? <section className="movies-page">
+    {page === 'profile' ? <ProfilePage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'users' ? <UserManagementPage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'hall-layout' ? <HallLayoutPage hall={selectedHall} onBack={() => setPage('halls')} /> : page === 'halls' ? <HallManagementPage onBack={() => setPage('home')} onViewLayout={(hall) => { setSelectedHall(hall); setPage('hall-layout'); }} /> : page === 'manage' ? <MovieManagementPage accessToken={session?.accessToken} onBack={() => setPage('home')} onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)} /> : page === 'home' ? <section className="movies-page">
       <div className="movies-heading">
         <div><p className="eyebrow">SMART CINEMA</p><h1>Find your next<br />great story.</h1><p>Explore films currently playing at Smart Cinema.</p></div>
         <label className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search movies or genres" /></label>
