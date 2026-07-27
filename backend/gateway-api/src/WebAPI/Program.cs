@@ -17,6 +17,9 @@ var authServiceBaseUrl = builder.Configuration["Services:AuthBaseUrl"]
 var moviesServiceBaseUrl = builder.Configuration["Services:MoviesBaseUrl"]
     ?? builder.Configuration["Services__MoviesBaseUrl"]
     ?? throw new InvalidOperationException("Services:MoviesBaseUrl is not configured.");
+var hallsServiceBaseUrl = builder.Configuration["Services:HallsBaseUrl"]
+    ?? builder.Configuration["Services__HallsBaseUrl"]
+    ?? throw new InvalidOperationException("Services:HallsBaseUrl is not configured.");
 var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"]
     ?? builder.Configuration["Cors__AllowedOrigin"]
     ?? throw new InvalidOperationException("Cors:AllowedOrigin is not configured.");
@@ -39,7 +42,8 @@ builder.Services.AddReverseProxy().LoadFromMemory(
         ClusterId = "auth-cluster",
         Match = new RouteMatch { Path = "/api/users/{**catch-all}" }
     },
-    new RouteConfig { RouteId = "movies-route", ClusterId = "movies-cluster", Match = new RouteMatch { Path = "/api/movies/{**catch-all}" } }
+    new RouteConfig { RouteId = "movies-route", ClusterId = "movies-cluster", Match = new RouteMatch { Path = "/api/movies/{**catch-all}" } },
+    new RouteConfig { RouteId = "halls-route", ClusterId = "halls-cluster", Match = new RouteMatch { Path = "/api/halls/{**catch-all}" } }
 ],
 [
     new ClusterConfig
@@ -50,7 +54,8 @@ builder.Services.AddReverseProxy().LoadFromMemory(
             ["auth-service"] = new() { Address = $"{authServiceBaseUrl.TrimEnd('/')}/" }
         }
     },
-    new ClusterConfig { ClusterId = "movies-cluster", Destinations = new Dictionary<string, DestinationConfig> { ["movies-service"] = new() { Address = $"{moviesServiceBaseUrl.TrimEnd('/')}/" } } }
+    new ClusterConfig { ClusterId = "movies-cluster", Destinations = new Dictionary<string, DestinationConfig> { ["movies-service"] = new() { Address = $"{moviesServiceBaseUrl.TrimEnd('/')}/" } } },
+    new ClusterConfig { ClusterId = "halls-cluster", Destinations = new Dictionary<string, DestinationConfig> { ["halls-service"] = new() { Address = $"{hallsServiceBaseUrl.TrimEnd('/')}/" } } }
 ]);
 
 var app = builder.Build();
