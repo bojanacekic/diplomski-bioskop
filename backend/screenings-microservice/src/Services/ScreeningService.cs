@@ -54,6 +54,7 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
             StartsAtUtc = request.StartsAtUtc,
             EndsAtUtc = request.EndsAtUtc,
             BaseTicketPrice = request.BaseTicketPrice,
+            Status = request.Status,
         };
 
         db.Screenings.Add(screening);

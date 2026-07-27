@@ -7,4 +7,5 @@ public sealed class CreateScreeningRequestDto
     public DateTime StartsAtUtc { get; init; }
     public DateTime EndsAtUtc { get; init; }
     public decimal BaseTicketPrice { get; init; }
+    public ScreeningStatus Status { get; init; } = ScreeningStatus.Scheduled;
 }

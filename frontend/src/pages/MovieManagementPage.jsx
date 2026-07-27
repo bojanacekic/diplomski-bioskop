@@ -58,7 +58,7 @@ export default function MovieManagementPage({
   const editMovie = (movie) => {
     setEditingId(movie.id);
     setForm({ ...movie, premiereDate: movie.premiereDate.slice(0, 10) });
-    setMessage(`Editing ${movie.title}`);
+    setMessage("");
   };
 
   const newMovie = () => {

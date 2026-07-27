@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
-const empty = { movieId: "", hallId: "", startsAtUtc: "", baseTicketPrice: "" };
+const empty = {
+  movieId: "",
+  hallId: "",
+  startsAtUtc: "",
+  baseTicketPrice: "",
+  status: 0,
+};
 const statusNames = ["SCHEDULED", "ACTIVE", "COMPLETED", "CANCELLED"];
 
 export default function ScreeningManagementPage({ accessToken, onBack }) {
@@ -44,6 +50,7 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
       hallId: screening.hallId,
       startsAtUtc: localStart.toISOString().slice(0, 16),
       baseTicketPrice: screening.baseTicketPrice,
+      status: screening.status,
     });
     setMessage("");
   };
@@ -66,7 +73,6 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
           startsAtUtc: start.toISOString(),
           endsAtUtc: end.toISOString(),
           baseTicketPrice: Number(form.baseTicketPrice),
-          ...(editing ? { status: editing.status } : {}),
         }),
       },
     );
@@ -185,22 +191,20 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
               required
             />
           </label>
-          {editing && (
-            <label>
-              Screening status
-              <select
-                value={editing.status}
-                onChange={(event) =>
-                  setEditing({ ...editing, status: Number(event.target.value) })
-                }
-              >
-                <option value="0">Scheduled</option>
-                <option value="1">Active</option>
-                <option value="2">Completed</option>
-                <option value="3">Cancelled</option>
-              </select>
-            </label>
-          )}
+          <label>
+            Screening status
+            <select
+              value={form.status}
+              onChange={(event) =>
+                setForm({ ...form, status: Number(event.target.value) })
+              }
+            >
+              <option value="0">Scheduled</option>
+              <option value="1">Active</option>
+              <option value="2">Completed</option>
+              <option value="3">Cancelled</option>
+            </select>
+          </label>
           {message && <p className="form-message">{message}</p>}
           <div className="form-actions">
             <button className="submit-button">
