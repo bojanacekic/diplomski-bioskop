@@ -3,6 +3,7 @@ import lightLogo from './assets/smart-cinema-logo-light.png';
 import MovieManagementPage from './pages/MovieManagementPage';
 import HallManagementPage from './pages/HallManagementPage';
 import HallLayoutPage from './pages/HallLayoutPage';
+import ScreeningManagementPage from './pages/ScreeningManagementPage';
 import { ProfilePage, UserManagementPage } from './pages/UserPages';
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
@@ -109,12 +110,12 @@ function App() {
       <button className="logo" onClick={() => setPage('home')}><span className="logo-mark"><img src={lightLogo} alt="Smart Cinema" /></span><span className="logo-text">Smart Cinema</span></button>
       <nav>
         {session
-          ? <div className="account-menu"><button className="account-trigger" onClick={() => setAccountMenuOpen((open) => !open)}>Hi, {session.username} <span>⌄</span></button>{accountMenuOpen && <div className="account-dropdown"><button onClick={() => { setPage('profile'); setAccountMenuOpen(false); }}>My profile</button>{(isCinemaManager || isAdministrator) && <><button onClick={() => { setPage('manage'); setAccountMenuOpen(false); }}>Manage movies</button><button onClick={() => { setPage('halls'); setAccountMenuOpen(false); }}>Manage halls</button></>}{isAdministrator && <button onClick={() => { setPage('users'); setAccountMenuOpen(false); }}>Manage users</button>}<button className="signout-menu-item" onClick={signOut}>Sign out</button></div>}</div>
+          ? <div className="account-menu"><button className="account-trigger" onClick={() => setAccountMenuOpen((open) => !open)}>Hi, {session.username} <span>⌄</span></button>{accountMenuOpen && <div className="account-dropdown"><button onClick={() => { setPage('profile'); setAccountMenuOpen(false); }}>My profile</button>{(isCinemaManager || isAdministrator) && <><button onClick={() => { setPage('manage'); setAccountMenuOpen(false); }}>Manage movies</button><button onClick={() => { setPage('halls'); setAccountMenuOpen(false); }}>Manage halls</button><button onClick={() => { setPage('screenings'); setAccountMenuOpen(false); }}>Manage screenings</button></>}{isAdministrator && <button onClick={() => { setPage('users'); setAccountMenuOpen(false); }}>Manage users</button>}<button className="signout-menu-item" onClick={signOut}>Sign out</button></div>}</div>
           : <><button className="header-link" onClick={() => goAuth('login')}>Sign in</button><button className="header-cta" onClick={() => goAuth('register')}>Create account</button></>}
       </nav>
     </header>
 
-    {page === 'profile' ? <ProfilePage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'users' ? <UserManagementPage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'hall-layout' ? <HallLayoutPage hall={selectedHall} onBack={() => setPage('halls')} /> : page === 'halls' ? <HallManagementPage onBack={() => setPage('home')} onViewLayout={(hall) => { setSelectedHall(hall); setPage('hall-layout'); }} /> : page === 'manage' ? <MovieManagementPage accessToken={session?.accessToken} onBack={() => setPage('home')} onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)} /> : page === 'home' ? <section className="movies-page">
+    {page === 'profile' ? <ProfilePage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'users' ? <UserManagementPage token={session?.accessToken} onBack={() => setPage('home')} /> : page === 'screenings' ? <ScreeningManagementPage onBack={() => setPage('home')} /> : page === 'hall-layout' ? <HallLayoutPage hall={selectedHall} onBack={() => setPage('halls')} /> : page === 'halls' ? <HallManagementPage onBack={() => setPage('home')} onViewLayout={(hall) => { setSelectedHall(hall); setPage('hall-layout'); }} /> : page === 'manage' ? <MovieManagementPage accessToken={session?.accessToken} onBack={() => setPage('home')} onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)} /> : page === 'home' ? <section className="movies-page">
       <div className="movies-heading">
         <div><p className="eyebrow">SMART CINEMA</p><h1>Find your next<br />great story.</h1><p>Explore films currently playing at Smart Cinema.</p></div>
         <label className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search movies or genres" /></label>

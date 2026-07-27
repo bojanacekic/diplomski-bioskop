@@ -8,14 +8,11 @@ export function ProfilePage({ token, onBack }) {
   const [message, setMessage] = useState('');
   useEffect(() => { fetch(`${api}/api/users/me`, { headers: headers(token) }).then((response) => response.json()).then((user) => setForm({ username: user.username, email: user.email })); }, []);
   const save = async (event) => { event.preventDefault(); const response = await fetch(`${api}/api/users/me`, { method: 'PUT', headers: headers(token), body: JSON.stringify(form) }); setMessage(response.ok ? 'Profile updated.' : 'Profile could not be updated.'); };
-  return <section className="management-page"><div className="management-heading"><div><p className="eyebrow">MY ACCOUNT</p><h1>My profile.</h1></div><button className="header-link" onClick={onBack}>← Back to movies</button></div><div className="profile-layout"><form className="movie-form profile-form" onSubmit={save}><p className="eyebrow">PERSONAL DETAILS</p><h2>Account information</h2><p className="profile-help">Keep your personal details current. These details are visible only to you and Smart Cinema administrators.</p><label>Username<input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} required /></label><label>Email address<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>{message && <p className="form-message">{message}</p>}<button className="submit-button">Save changes</button></form></div></section>;
+  return <section className="management-page"><div className="management-heading"><div><p className="eyebrow">MY ACCOUNT</p><h1>My profile</h1></div><button className="header-link" onClick={onBack}>← Back to movies</button></div><div className="profile-layout"><form className="movie-form profile-form" onSubmit={save}><p className="eyebrow">PERSONAL DETAILS</p><h2>Account information</h2><p className="profile-help">Keep your personal details current. These details are visible only to you and Smart Cinema administrators.</p><label>Username<input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} required /></label><label>Email address<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>{message && <p className="form-message">{message}</p>}<button className="submit-button">Save changes</button></form></div></section>;
 }
 
 export function UserManagementPage({ token, onBack }) {
-  const [users, setUsers] = useState([]);
-  const [search, setSearch] = useState('');
-  const [editingUser, setEditingUser] = useState(null);
-  const [form, setForm] = useState({ username: '', email: '' });
+  const [users, setUsers] = useState([]); const [search, setSearch] = useState(''); const [editingUser, setEditingUser] = useState(null); const [form, setForm] = useState({ username: '', email: '' });
   const load = async () => { const response = await fetch(`${api}/api/users?search=${encodeURIComponent(search)}`, { headers: headers(token) }); if (response.ok) setUsers(await response.json()); };
   useEffect(() => { load(); }, [search]);
   const changeRole = async (id, role) => { await fetch(`${api}/api/users/${id}/role`, { method: 'PATCH', headers: headers(token), body: JSON.stringify({ role: Number(role) }) }); load(); };
