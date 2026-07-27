@@ -30,7 +30,19 @@ builder.Services.AddCors(o =>
 );
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
-    await scope.ServiceProvider.GetRequiredService<HallsDbContext>().Database.EnsureCreatedAsync();
+{
+    var database = scope.ServiceProvider.GetRequiredService<HallsDbContext>().Database;
+    await database.ExecuteSqlRawAsync("""
+        IF OBJECT_ID(N'[Halls]') IS NOT NULL
+        BEGIN
+            IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+                CREATE TABLE [__EFMigrationsHistory] ([MigrationId] nvarchar(150) NOT NULL PRIMARY KEY, [ProductVersion] nvarchar(32) NOT NULL);
+            IF NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20260727212337_InitialCreate')
+                INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES (N'20260727212337_InitialCreate', N'8.0.28');
+        END
+        """);
+    await database.MigrateAsync();
+}
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
