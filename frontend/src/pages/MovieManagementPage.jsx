@@ -7,17 +7,18 @@ const formatDate = (value) => new Intl.DateTimeFormat('sr-RS', { day: '2-digit',
 
 export default function MovieManagementPage({ accessToken, onBack, onMoviesChanged }) {
   const [movies, setMovies] = useState([]);
+  const [search, setSearch] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState({});
 
   const loadMovies = async () => {
-    const response = await fetch(`${apiUrl}/api/movies`);
+    const response = await fetch(`${apiUrl}/api/movies${search ? `?search=${encodeURIComponent(search)}` : ''}`);
     if (response.ok) setMovies(await response.json());
   };
 
-  useEffect(() => { loadMovies(); }, []);
+  useEffect(() => { loadMovies(); }, [search]);
 
   const updateField = (event) => {
     const { name, value } = event.target;
@@ -84,12 +85,12 @@ export default function MovieManagementPage({ accessToken, onBack, onMoviesChang
         {message && <p className="form-message">{message}</p>}
         <div className="form-actions"><button className="submit-button">{editingId ? 'Save changes' : 'Add movie'}</button>{editingId && <button type="button" className="secondary-button" onClick={() => { setEditingId(null); setForm(emptyForm); }}>Cancel</button>}</div>
       </form>
-      <div className="management-list">
+      <div><label className="search"><span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search movies by name or genre" /></label><div className="management-list user-list">
         {movies.map((movie) => <article className="manage-card" key={movie.id}>
           <div><p className="eyebrow">{['Upcoming', 'Active', 'Withdrawn'][movie.status]}</p><h2>{movie.title}</h2><p>{movie.genre} · {movie.durationMinutes} min · {formatDate(movie.premiereDate)}</p></div>
           <div className="manage-actions"><button className="secondary-button" onClick={() => editMovie(movie)}>Edit</button>{movie.status === 0 && <button className="secondary-button" onClick={() => changeStatus(movie.id, 1)}>Set active</button>}{movie.status === 1 && <button className="secondary-button" onClick={() => changeStatus(movie.id, 0)}>Set upcoming</button>}<button className="danger-button" onClick={() => withdrawMovie(movie.id)}>Withdraw</button></div>
         </article>)}
-      </div>
+      </div></div>
     </div>
   </section>;
 }

@@ -70,6 +70,7 @@ h1 { font-size: clamp(3rem, 6vw, 5.7rem); line-height: .95; }
 .mode-switch button.active { background: var(--paper); color: var(--ink); box-shadow: 0 1px 5px rgba(65, 46, 28, .14); }
 form label { display: grid; gap: .45rem; font-size: .85rem; font-weight: 600; color: #493f35; margin: 1rem 0; }
 form input { border: 1px solid #ddcfbd; border-radius: .45rem; padding: .85rem; outline: 0; background: var(--paper); }
+form select { border: 1px solid #ddcfbd; border-radius: .45rem; padding: .85rem; outline: 0; background: var(--paper); }
 form input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px #f8e8c8; }
 .invalid-field { border-color: var(--cinema-red) !important; }
 .field-error { color: var(--cinema-red); font-weight: 500; line-height: 1.35; }
