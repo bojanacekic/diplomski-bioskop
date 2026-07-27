@@ -23,11 +23,12 @@ public sealed class JwtTokenGenerator(IOptions<JwtSettings> settings) : IJwtToke
                 new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new(JwtRegisteredClaimNames.UniqueName, user.Username),
                 new(JwtRegisteredClaimNames.Email, user.Email),
-                new(ClaimTypes.Role, user.Role.ToString())
+                new(ClaimTypes.Role, user.Role.ToString()),
             ],
             notBefore: DateTime.UtcNow,
             expires: expiresAtUtc,
-            signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256));
+            signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
+        );
 
         return new AuthResponseDto
         {
@@ -35,7 +36,7 @@ public sealed class JwtTokenGenerator(IOptions<JwtSettings> settings) : IJwtToke
             ExpiresAtUtc = expiresAtUtc,
             UserId = user.Id,
             Username = user.Username,
-            Role = user.Role
+            Role = user.Role,
         };
     }
 }

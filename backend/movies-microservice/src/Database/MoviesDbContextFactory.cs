@@ -8,11 +8,14 @@ public sealed class MoviesDbContextFactory : IDesignTimeDbContextFactory<MoviesD
     public MoviesDbContext CreateDbContext(string[] args)
     {
         DotEnvReader.Load();
-        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__MoviesDatabase")
-            ?? throw new InvalidOperationException("ConnectionStrings__MoviesDatabase must be configured in .env.");
+        var connectionString =
+            Environment.GetEnvironmentVariable("ConnectionStrings__MoviesDatabase")
+            ?? throw new InvalidOperationException(
+                "ConnectionStrings__MoviesDatabase must be configured in .env."
+            );
 
-        return new MoviesDbContext(new DbContextOptionsBuilder<MoviesDbContext>()
-            .UseSqlServer(connectionString)
-            .Options);
+        return new MoviesDbContext(
+            new DbContextOptionsBuilder<MoviesDbContext>().UseSqlServer(connectionString).Options
+        );
     }
 }

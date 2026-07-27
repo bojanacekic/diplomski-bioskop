@@ -4,5 +4,5 @@ public enum UserRole
 {
     RegisteredUser = 1,
     CinemaManager = 2,
-    Administrator = 3
+    Administrator = 3,
 }

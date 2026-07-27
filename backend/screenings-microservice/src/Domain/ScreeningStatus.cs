@@ -1,2 +1,9 @@
 namespace Screenings.Domain;
-public enum ScreeningStatus { Scheduled, Active, Completed, Cancelled }
+
+public enum ScreeningStatus
+{
+    Scheduled,
+    Active,
+    Completed,
+    Cancelled,
+}

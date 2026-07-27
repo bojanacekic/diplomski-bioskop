@@ -8,8 +8,11 @@ public sealed class AuthDbContextFactory : IDesignTimeDbContextFactory<AuthDbCon
     public AuthDbContext CreateDbContext(string[] args)
     {
         DotEnvReader.Load();
-        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__AuthDatabase")
-            ?? throw new InvalidOperationException("ConnectionStrings__AuthDatabase must be configured in .env.");
+        var connectionString =
+            Environment.GetEnvironmentVariable("ConnectionStrings__AuthDatabase")
+            ?? throw new InvalidOperationException(
+                "ConnectionStrings__AuthDatabase must be configured in .env."
+            );
 
         var options = new DbContextOptionsBuilder<AuthDbContext>()
             .UseSqlServer(connectionString)

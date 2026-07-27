@@ -13,12 +13,17 @@ public static class DotEnvReader
                 foreach (var line in File.ReadLines(envFilePath))
                 {
                     var value = line.Trim();
-                    if (string.IsNullOrWhiteSpace(value) || value.StartsWith('#')) continue;
+                    if (string.IsNullOrWhiteSpace(value) || value.StartsWith('#'))
+                        continue;
                     var separator = value.IndexOf('=');
-                    if (separator <= 0) continue;
+                    if (separator <= 0)
+                        continue;
                     var key = value[..separator].Trim();
                     if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(key)))
-                        Environment.SetEnvironmentVariable(key, value[(separator + 1)..].Trim().Trim('"'));
+                        Environment.SetEnvironmentVariable(
+                            key,
+                            value[(separator + 1)..].Trim().Trim('"')
+                        );
                 }
                 return;
             }

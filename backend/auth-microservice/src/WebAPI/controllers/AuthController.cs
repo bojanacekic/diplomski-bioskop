@@ -12,7 +12,10 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Register(RegisterUserRequestDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Register(
+        RegisterUserRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
         var result = await authService.RegisterAsync(request, cancellationToken);
         if (!result.IsSuccess)
@@ -27,7 +30,10 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Login(LoginRequestDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login(
+        LoginRequestDto request,
+        CancellationToken cancellationToken
+    )
     {
         var result = await authService.LoginAsync(request, cancellationToken);
         if (!result.IsSuccess)

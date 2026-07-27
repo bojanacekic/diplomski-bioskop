@@ -1,4 +1,78 @@
-using Microsoft.EntityFrameworkCore; using Screenings.Database; using Screenings.Domain; using Screenings.Services; using Screenings.WebAPI.Validators;
+using Microsoft.EntityFrameworkCore;
+using Screenings.Database;
+using Screenings.Domain;
+using Screenings.Services;
+using Screenings.WebAPI.Validators;
+
 DotEnvReader.Load(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
-DotEnvReader.Load(Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env")));
-var builder=WebApplication.CreateBuilder(args);var screeningsUrl=builder.Configuration["Screenings:Url"]??builder.Configuration["Screenings__Url"]??"http://localhost:5004";builder.WebHost.UseUrls(screeningsUrl);var connection=builder.Configuration.GetConnectionString("ScreeningsDatabase")??Environment.GetEnvironmentVariable("ConnectionStrings__ScreeningsDatabase")??throw new InvalidOperationException("ConnectionStrings__ScreeningsDatabase is not configured.");builder.Services.AddDbContext<ScreeningsDbContext>(o=>o.UseSqlServer(connection));builder.Services.AddScoped<IScreeningService,ScreeningService>();builder.Services.AddCors(o=>o.AddDefaultPolicy(p=>p.WithOrigins(builder.Configuration["Cors:AllowedOrigin"]??"http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));var app=builder.Build();using(var scope=app.Services.CreateScope())await scope.ServiceProvider.GetRequiredService<ScreeningsDbContext>().Database.EnsureCreatedAsync();app.UseCors();app.MapGet("/api/screenings",async(DateOnly? date,IScreeningService s,CancellationToken t)=>Results.Ok(await s.GetAsync(date,t)));app.MapPost("/api/screenings",async(CreateScreeningRequestDto r,IScreeningService s,CancellationToken t)=>{var e=ScreeningValidator.Validate(r);if(e.Count>0)return Results.ValidationProblem(e);if(await s.HasOverlapAsync(r.HallId,r.StartsAtUtc,r.EndsAtUtc,null,t))return Results.Conflict(new{message="The hall already has a screening in this time slot."});var screening=await s.CreateAsync(r,t);return Results.Created($"/api/screenings/{screening.Id}",screening);});app.MapPut("/api/screenings/{id:guid}",async(Guid id,UpdateScreeningRequestDto r,IScreeningService s,CancellationToken t)=>{var e=ScreeningValidator.Validate(r);if(e.Count>0)return Results.ValidationProblem(e);if(await s.HasOverlapAsync(r.HallId,r.StartsAtUtc,r.EndsAtUtc,id,t))return Results.Conflict(new{message="The hall already has a screening in this time slot."});var screening=await s.UpdateAsync(id,r,t);return screening is null?Results.NotFound():Results.Ok(screening);});app.MapDelete("/api/screenings/{id:guid}",async(Guid id,IScreeningService s,CancellationToken t)=>await s.DeleteAsync(id,t)?Results.NoContent():Results.NotFound());app.Run();
+DotEnvReader.Load(
+    Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env"))
+);
+var builder = WebApplication.CreateBuilder(args);
+var screeningsUrl =
+    builder.Configuration["Screenings:Url"]
+    ?? builder.Configuration["Screenings__Url"]
+    ?? "http://localhost:5004";
+builder.WebHost.UseUrls(screeningsUrl);
+var connection =
+    builder.Configuration.GetConnectionString("ScreeningsDatabase")
+    ?? Environment.GetEnvironmentVariable("ConnectionStrings__ScreeningsDatabase")
+    ?? throw new InvalidOperationException(
+        "ConnectionStrings__ScreeningsDatabase is not configured."
+    );
+builder.Services.AddDbContext<ScreeningsDbContext>(o => o.UseSqlServer(connection));
+builder.Services.AddScoped<IScreeningService, ScreeningService>();
+builder.Services.AddCors(o =>
+    o.AddDefaultPolicy(p =>
+        p.WithOrigins(builder.Configuration["Cors:AllowedOrigin"] ?? "http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+    )
+);
+var app = builder.Build();
+using (var scope = app.Services.CreateScope())
+    await scope
+        .ServiceProvider.GetRequiredService<ScreeningsDbContext>()
+        .Database.EnsureCreatedAsync();
+app.UseCors();
+app.MapGet(
+    "/api/screenings",
+    async (DateOnly? date, IScreeningService s, CancellationToken t) =>
+        Results.Ok(await s.GetAsync(date, t))
+);
+app.MapPost(
+    "/api/screenings",
+    async (CreateScreeningRequestDto r, IScreeningService s, CancellationToken t) =>
+    {
+        var e = ScreeningValidator.Validate(r);
+        if (e.Count > 0)
+            return Results.ValidationProblem(e);
+        if (await s.HasOverlapAsync(r.HallId, r.StartsAtUtc, r.EndsAtUtc, null, t))
+            return Results.Conflict(
+                new { message = "The hall already has a screening in this time slot." }
+            );
+        var screening = await s.CreateAsync(r, t);
+        return Results.Created($"/api/screenings/{screening.Id}", screening);
+    }
+);
+app.MapPut(
+    "/api/screenings/{id:guid}",
+    async (Guid id, UpdateScreeningRequestDto r, IScreeningService s, CancellationToken t) =>
+    {
+        var e = ScreeningValidator.Validate(r);
+        if (e.Count > 0)
+            return Results.ValidationProblem(e);
+        if (await s.HasOverlapAsync(r.HallId, r.StartsAtUtc, r.EndsAtUtc, id, t))
+            return Results.Conflict(
+                new { message = "The hall already has a screening in this time slot." }
+            );
+        var screening = await s.UpdateAsync(id, r, t);
+        return screening is null ? Results.NotFound() : Results.Ok(screening);
+    }
+);
+app.MapDelete(
+    "/api/screenings/{id:guid}",
+    async (Guid id, IScreeningService s, CancellationToken t) =>
+        await s.DeleteAsync(id, t) ? Results.NoContent() : Results.NotFound()
+);
+app.Run();
