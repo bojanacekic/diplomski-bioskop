@@ -330,14 +330,15 @@ h1 {
 }
 .auth-card {
   width: min(100%, 460px);
-  height: 570px;
+  height: 600px;
   align-self: start;
   margin: -40px auto 0;
-  padding: 3rem 2rem;
+  padding: 2.4rem 2rem;
 }
+.auth-card form label { margin: .45rem 0; }.auth-card form input { padding: .7rem; }.auth-card .submit-button { margin-top: .6rem; }
 .auth-card h2 {
-  font-size: 2.6rem;
-  min-height: 3.2rem;
+  font-size: 2.35rem;
+  min-height: 2.8rem;
 }
 .back-button {
   background: transparent;
@@ -355,7 +356,7 @@ h1 {
   background: #f0e8dc;
   border: 1px solid #e5d8c5;
   border-radius: 0.55rem;
-  margin: 1.5rem 0;
+  margin: 1rem 0;
 }
 .mode-switch button {
   background: transparent;
@@ -369,6 +370,7 @@ h1 {
   color: var(--ink);
   box-shadow: 0 1px 5px rgba(65, 46, 28, 0.14);
 }
+.auth-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }.auth-name-row label { min-width: 0; }
 form label {
   display: grid;
   gap: 0.45rem;
@@ -419,15 +421,28 @@ form input:focus {
   margin: auto;
 }
 .management-heading {
+  position: relative;
   display: flex;
-  align-items: end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 2rem;
   margin-bottom: 2rem;
+  min-height: 154px;
 }
 .management-heading .header-link {
-  align-self: flex-start;
-  margin-top: 6.1rem;
+  position: absolute;
+  right: 0;
+  top: 6.1rem;
+  min-width: 160px;
+  width: 160px;
+  max-width: 160px;
+  height: 24px;
+  padding: 0;
+  line-height: 24px;
+  text-align: right;
+}
+.profile-page .management-heading .header-link {
+  right: 1.25rem;
 }
 .management-heading h1 {
   font-size: clamp(2.8rem, 5vw, 4.5rem);
@@ -455,7 +470,7 @@ form input:focus {
 }
 .profile-layout {
   max-width: 540px;
-  margin: 2rem auto 0;
+  margin: 0 auto;
 }
 .management-page:has(.profile-layout) {
   height: calc(100vh - 82px);
@@ -463,12 +478,15 @@ form input:focus {
 }
 .profile-form {
   max-width: none;
+  padding: 1.35rem;
 }
 .profile-help {
   color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.6;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: .35rem 0;
 }
+.profile-form label { margin: .45rem 0; }.profile-form input { padding: .7rem; }.profile-form .submit-button { margin-top: .65rem; }
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -746,6 +764,7 @@ form input:focus {
   }
   .management-heading {
     margin-bottom: 1.5rem;
+    min-height: 0;
   }
   .management-heading h1 {
     font-size: 3rem;

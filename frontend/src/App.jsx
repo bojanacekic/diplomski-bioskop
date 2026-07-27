@@ -7,7 +7,7 @@ import ScreeningManagementPage from "./pages/ScreeningManagementPage";
 import { ProfilePage, UserManagementPage } from "./pages/UserPages";
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
-const emptyRegister = { username: "", email: "", password: "" };
+const emptyRegister = { username: "", email: "", firstName: "", lastName: "", password: "" };
 const emptyLogin = { usernameOrEmail: "", password: "" };
 
 function App() {
@@ -367,15 +367,7 @@ function App() {
             </div>
             <form onSubmit={submitAuth}>
               {authMode === "register" && (
-                <label>
-                  Username
-                  <input
-                    name="username"
-                    value={registerForm.username}
-                    onChange={changeForm(setRegisterForm)}
-                    required
-                  />
-                </label>
+                <><div className="auth-name-row"><label>First name<input name="firstName" value={registerForm.firstName} onChange={changeForm(setRegisterForm)} required /></label><label>Last name<input name="lastName" value={registerForm.lastName} onChange={changeForm(setRegisterForm)} required /></label></div><label>Username<input name="username" value={registerForm.username} onChange={changeForm(setRegisterForm)} required /></label></>
               )}
               <label>
                 {authMode === "register"

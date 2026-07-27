@@ -13,6 +13,8 @@ public sealed class RegisterUserRequestValidator : AbstractValidator<RegisterUse
             .MaximumLength(50)
             .Matches("^[A-Za-z0-9_.-]+$");
         RuleFor(request => request.Email).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(request => request.FirstName).NotEmpty().MaximumLength(100);
+        RuleFor(request => request.LastName).NotEmpty().MaximumLength(100);
         RuleFor(request => request.Password).NotEmpty();
     }
 }

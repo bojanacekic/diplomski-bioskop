@@ -45,6 +45,8 @@ public sealed class UserManagementService(AuthDbContext db) : IUserManagementSer
             throw new InvalidOperationException("Username or email is already in use.");
         u.Username = username;
         u.Email = email;
+        u.FirstName = r.FirstName.Trim();
+        u.LastName = r.LastName.Trim();
         await db.SaveChangesAsync(t);
         return ToDto(u);
     }
@@ -75,6 +77,8 @@ public sealed class UserManagementService(AuthDbContext db) : IUserManagementSer
             Id = u.Id,
             Username = u.Username,
             Email = u.Email,
+            FirstName = u.FirstName,
+            LastName = u.LastName,
             Role = u.Role,
             IsActive = u.IsActive,
             CreatedAtUtc = u.CreatedAtUtc,
@@ -86,6 +90,8 @@ public sealed class UserManagementService(AuthDbContext db) : IUserManagementSer
             Id = u.Id,
             Username = u.Username,
             Email = u.Email,
+            FirstName = u.FirstName,
+            LastName = u.LastName,
             Role = u.Role,
             IsActive = u.IsActive,
             CreatedAtUtc = u.CreatedAtUtc,

@@ -7,12 +7,12 @@ const headers = (token) => ({
 });
 
 export function ProfilePage({ token, onBack }) {
-  const [form, setForm] = useState({ username: "", email: "" });
+  const [form, setForm] = useState({ username: "", email: "", firstName: "", lastName: "" });
   const [message, setMessage] = useState("");
   useEffect(() => {
     fetch(`${api}/api/users/me`, { headers: headers(token) })
       .then((response) => response.json())
-      .then((user) => setForm({ username: user.username, email: user.email }));
+      .then((user) => setForm({ username: user.username, email: user.email, firstName: user.firstName ?? "", lastName: user.lastName ?? "" }));
   }, []);
   const save = async (event) => {
     event.preventDefault();
@@ -26,7 +26,7 @@ export function ProfilePage({ token, onBack }) {
     );
   };
   return (
-    <section className="management-page">
+    <section className="management-page profile-page">
       <div className="management-heading">
         <div>
           <p className="eyebrow">MY ACCOUNT</p>
@@ -44,6 +44,10 @@ export function ProfilePage({ token, onBack }) {
             Keep your personal details current. These details are visible only
             to you and Smart Cinema administrators.
           </p>
+          <div className="auth-name-row">
+            <label>First name<input value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} required /></label>
+            <label>Last name<input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} required /></label>
+          </div>
           <label>
             Username
             <input

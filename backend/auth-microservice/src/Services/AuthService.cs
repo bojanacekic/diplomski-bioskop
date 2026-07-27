@@ -29,6 +29,8 @@ public sealed class AuthService(AuthDbContext dbContext, IJwtTokenGenerator jwtT
             Id = Guid.NewGuid(),
             Username = username,
             Email = email,
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             CreatedAtUtc = DateTime.UtcNow,
         };
