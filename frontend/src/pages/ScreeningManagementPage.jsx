@@ -57,7 +57,10 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
       `${api}/api/screenings${editing ? `/${editing.id}` : ""}`,
       {
         method: editing ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           ...form,
           startsAtUtc: start.toISOString(),
@@ -182,6 +185,22 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
               required
             />
           </label>
+          {editing && (
+            <label>
+              Screening status
+              <select
+                value={editing.status}
+                onChange={(event) =>
+                  setEditing({ ...editing, status: Number(event.target.value) })
+                }
+              >
+                <option value="0">Scheduled</option>
+                <option value="1">Active</option>
+                <option value="2">Completed</option>
+                <option value="3">Cancelled</option>
+              </select>
+            </label>
+          )}
           {message && <p className="form-message">{message}</p>}
           <div className="form-actions">
             <button className="submit-button">

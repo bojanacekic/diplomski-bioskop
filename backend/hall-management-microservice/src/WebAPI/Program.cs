@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Halls.Database;
 using Halls.Domain;
 using Halls.Services;
@@ -17,8 +18,10 @@ builder.WebHost.UseUrls(builder.Configuration["Halls:Url"] ?? "http://localhost:
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? builder.Configuration["Jwt__Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? builder.Configuration["Jwt__Audience"] ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? builder.Configuration["Jwt__SecretKey"] ?? throw new InvalidOperationException("Jwt:SecretKey is not configured.");
+var screeningsServiceBaseUrl = builder.Configuration["Services:ScreeningsBaseUrl"] ?? builder.Configuration["Services__ScreeningsBaseUrl"] ?? "http://localhost:5004";
 builder.Services.AddDbContext<HallsDbContext>(o => o.UseSqlServer(connection));
 builder.Services.AddScoped<IHallService, HallService>();
+builder.Services.AddHttpClient();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidIssuer = jwtIssuer, ValidateAudience = true, ValidAudience = jwtAudience, ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)), ValidateLifetime = true });
 builder.Services.AddAuthorization(options => options.AddPolicy("HallManagement", policy => policy.RequireRole("CinemaManager", "Administrator")));
 builder.Services.AddCors(o =>
@@ -74,7 +77,16 @@ app.MapPut(
 ).RequireAuthorization("HallManagement");
 app.MapDelete(
     "/api/halls/{id:guid}",
-    async (Guid id, IHallService service, CancellationToken token) =>
-        await service.DeleteAsync(id, token) ? Results.NoContent() : Results.NotFound()
+    async (Guid id, IHallService service, IHttpClientFactory httpClientFactory, CancellationToken token) =>
+    {
+        using var response = await httpClientFactory.CreateClient().GetAsync($"{screeningsServiceBaseUrl.TrimEnd('/')}/api/screenings", token);
+        if (response.IsSuccessStatusCode)
+        {
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(token));
+            if (document.RootElement.EnumerateArray().Any(screening => screening.GetProperty("hallId").GetGuid() == id))
+                return Results.Conflict(new { message = "A hall with scheduled screenings cannot be deleted." });
+        }
+        return await service.DeleteAsync(id, token) ? Results.NoContent() : Results.NotFound();
+    }
 ).RequireAuthorization("HallManagement");
 app.Run();
