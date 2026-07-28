@@ -41,6 +41,12 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
         );
     }
 
+    public async Task<ScreeningResponseDto?> GetByIdAsync(Guid id, CancellationToken token)
+    {
+        var screening = await db.Screenings.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id, token);
+        return screening is null ? null : Map(screening);
+    }
+
     public async Task<ScreeningResponseDto> CreateAsync(
         CreateScreeningRequestDto request,
         CancellationToken token

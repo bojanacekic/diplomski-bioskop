@@ -5,6 +5,7 @@ namespace Screenings.Services;
 public interface IScreeningService
 {
     Task<IReadOnlyList<ScreeningResponseDto>> GetAsync(DateOnly? date, CancellationToken token);
+    Task<ScreeningResponseDto?> GetByIdAsync(Guid id, CancellationToken token);
     Task<ScreeningResponseDto> CreateAsync(
         CreateScreeningRequestDto request,
         CancellationToken token

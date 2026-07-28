@@ -28,6 +28,10 @@ var screeningsServiceBaseUrl =
     builder.Configuration["Services:ScreeningsBaseUrl"]
     ?? builder.Configuration["Services__ScreeningsBaseUrl"]
     ?? throw new InvalidOperationException("Services:ScreeningsBaseUrl is not configured.");
+var reservationsServiceBaseUrl =
+    builder.Configuration["Services:ReservationsBaseUrl"]
+    ?? builder.Configuration["Services__ReservationsBaseUrl"]
+    ?? throw new InvalidOperationException("Services:ReservationsBaseUrl is not configured.");
 var allowedOrigin =
     builder.Configuration["Cors:AllowedOrigin"]
     ?? builder.Configuration["Cors__AllowedOrigin"]
@@ -80,6 +84,12 @@ builder
                 ClusterId = "screenings-cluster",
                 Match = new RouteMatch { Path = "/api/screenings/{**catch-all}" },
             },
+            new RouteConfig
+            {
+                RouteId = "reservations-route",
+                ClusterId = "reservations-cluster",
+                Match = new RouteMatch { Path = "/api/reservations/{**catch-all}" },
+            },
         ],
         [
             new ClusterConfig
@@ -117,6 +127,17 @@ builder
                     ["screenings-service"] = new()
                     {
                         Address = $"{screeningsServiceBaseUrl.TrimEnd('/')}/",
+                    },
+                },
+            },
+            new ClusterConfig
+            {
+                ClusterId = "reservations-cluster",
+                Destinations = new Dictionary<string, DestinationConfig>
+                {
+                    ["reservations-service"] = new()
+                    {
+                        Address = $"{reservationsServiceBaseUrl.TrimEnd('/')}/",
                     },
                 },
             },

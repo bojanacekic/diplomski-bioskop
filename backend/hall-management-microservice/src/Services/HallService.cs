@@ -26,6 +26,9 @@ public sealed class HallService(HallsDbContext db) : IHallService
         return await query.Select(x => Map(x)).ToListAsync(token);
     }
 
+    public async Task<HallResponseDto?> GetByIdAsync(Guid id, CancellationToken token) =>
+        await db.Halls.AsNoTracking().Where(hall => hall.Id == id).Select(hall => Map(hall)).SingleOrDefaultAsync(token);
+
     public async Task<HallResponseDto?> UpdateAsync(
         Guid id,
         UpdateHallRequestDto request,

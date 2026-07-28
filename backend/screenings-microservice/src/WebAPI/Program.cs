@@ -62,6 +62,11 @@ app.MapGet(
     async (DateOnly? date, IScreeningService s, CancellationToken t) =>
         Results.Ok(await s.GetAsync(date, t))
 );
+app.MapGet(
+    "/api/screenings/{id:guid}",
+    async (Guid id, IScreeningService s, CancellationToken t) =>
+        (await s.GetByIdAsync(id, t)) is { } screening ? Results.Ok(screening) : Results.NotFound()
+);
 app.MapPost(
     "/api/screenings",
     async (CreateScreeningRequestDto r, IScreeningService s, CancellationToken t) =>

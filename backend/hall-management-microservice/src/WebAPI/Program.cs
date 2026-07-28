@@ -54,6 +54,11 @@ app.MapGet(
     async (string? search, IHallService service, CancellationToken token) =>
         Results.Ok(await service.GetAsync(search, token))
 );
+app.MapGet(
+    "/api/halls/{id:guid}",
+    async (Guid id, IHallService service, CancellationToken token) =>
+        (await service.GetByIdAsync(id, token)) is { } hall ? Results.Ok(hall) : Results.NotFound()
+);
 app.MapPost(
     "/api/halls",
     async (CreateHallRequestDto request, IHallService service, CancellationToken token) =>
