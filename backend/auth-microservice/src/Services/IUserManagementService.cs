@@ -11,6 +11,7 @@ public interface IUserManagementService
         UpdateProfileRequestDto request,
         CancellationToken token
     );
+    Task ChangePasswordAsync(Guid id, ChangePasswordRequestDto request, CancellationToken token);
     Task<UserResponseDto?> ChangeRoleAsync(Guid id, UserRole role, CancellationToken token);
     Task<bool> DeactivateAsync(Guid id, CancellationToken token);
 }

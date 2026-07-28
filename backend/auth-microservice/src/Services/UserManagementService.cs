@@ -18,7 +18,13 @@ public sealed class UserManagementService(AuthDbContext db) : IUserManagementSer
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim();
-            q = q.Where(x => x.Username.Contains(s) || x.Email.Contains(s));
+            q = q.Where(
+                x =>
+                    x.Username.Contains(s)
+                    || x.Email.Contains(s)
+                    || x.FirstName.Contains(s)
+                    || x.LastName.Contains(s)
+            );
         }
         return await q.OrderBy(x => x.Username).Select(Map()).ToListAsync(t);
     }
@@ -29,8 +35,13 @@ public sealed class UserManagementService(AuthDbContext db) : IUserManagementSer
         CancellationToken t
     )
     {
-        if (string.IsNullOrWhiteSpace(r.Username) || string.IsNullOrWhiteSpace(r.Email))
-            throw new ArgumentException("Username and email are required.");
+        if (
+            string.IsNullOrWhiteSpace(r.Username)
+            || string.IsNullOrWhiteSpace(r.Email)
+            || string.IsNullOrWhiteSpace(r.FirstName)
+            || string.IsNullOrWhiteSpace(r.LastName)
+        )
+            throw new ArgumentException("First name, last name, username and email are required.");
         var u = await db.Users.SingleOrDefaultAsync(x => x.Id == id, t);
         if (u is null)
             return null;
@@ -49,6 +60,26 @@ public sealed class UserManagementService(AuthDbContext db) : IUserManagementSer
         u.LastName = r.LastName.Trim();
         await db.SaveChangesAsync(t);
         return ToDto(u);
+    }
+
+    public async Task ChangePasswordAsync(
+        Guid id,
+        ChangePasswordRequestDto request,
+        CancellationToken token
+    )
+    {
+        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id, token);
+        if (user is null)
+            throw new InvalidOperationException("User account was not found.");
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            throw new InvalidOperationException("Current password is incorrect.");
+        if (BCrypt.Net.BCrypt.Verify(request.NewPassword, user.PasswordHash))
+            throw new InvalidOperationException(
+                "New password must be different from the current password."
+            );
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await db.SaveChangesAsync(token);
     }
 
     public async Task<UserResponseDto?> ChangeRoleAsync(Guid id, UserRole role, CancellationToken t)

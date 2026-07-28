@@ -335,16 +335,31 @@ h1 {
   margin: -40px auto 0;
   padding: 2.4rem 2rem;
 }
-.auth-card form label { margin: .45rem 0; }.auth-card form input { padding: .7rem; }.auth-card .submit-button { margin-top: .6rem; }
+.auth-card form {
+  display: grid;
+  gap: 0.9rem;
+}
+.auth-card form label,
+.auth-name-row label {
+  margin: 0;
+}
+.auth-card form input {
+  padding: 0.7rem;
+}
+.auth-card .submit-button {
+  margin-top: 0;
+}
 .auth-card h2 {
   font-size: 2.35rem;
   min-height: 2.8rem;
 }
 .back-button {
+  display: block;
   background: transparent;
   border: 0;
   padding: 0;
   color: var(--gold);
+  margin-left: auto;
   margin-bottom: 2rem;
   position: relative;
   top: 12px;
@@ -441,9 +456,6 @@ form input:focus {
   line-height: 24px;
   text-align: right;
 }
-.profile-page .management-heading .header-link {
-  right: 1.25rem;
-}
 .management-heading h1 {
   font-size: clamp(2.8rem, 5vw, 4.5rem);
 }
@@ -472,9 +484,8 @@ form input:focus {
   max-width: 540px;
   margin: 0 auto;
 }
-.management-page:has(.profile-layout) {
-  height: calc(100vh - 82px);
-  overflow: hidden;
+.password-form {
+  margin-top: 1.5rem;
 }
 .profile-form {
   max-width: none;
@@ -553,6 +564,9 @@ form input:focus {
 .form-message {
   color: var(--cinema-red);
   font-size: 0.85rem;
+}
+.form-message.success {
+  color: #24723c;
 }
 .form-actions,
 .manage-actions {

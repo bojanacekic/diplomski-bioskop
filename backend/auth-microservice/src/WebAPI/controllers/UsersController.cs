@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using AuthMicroservice.Domain;
 using AuthMicroservice.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -11,11 +12,14 @@ namespace AuthMicroservice.WebAPI.Controllers;
 [Authorize]
 public sealed class UsersController(IUserManagementService users) : ControllerBase
 {
-    private Guid CurrentUserId() =>
-        Guid.Parse(
-            User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
-                ?? throw new UnauthorizedAccessException()
-        );
+    private Guid CurrentUserId()
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        return Guid.TryParse(userId, out var id) ? id : throw new UnauthorizedAccessException();
+    }
 
     [HttpGet("me")]
     public async Task<IActionResult> Me(CancellationToken t) =>
@@ -33,6 +37,20 @@ public sealed class UsersController(IUserManagementService users) : ControllerBa
         catch (Exception e) when (e is ArgumentException or InvalidOperationException)
         {
             return BadRequest(new { message = e.Message });
+        }
+    }
+
+    [HttpPut("me/password")]
+    public async Task<IActionResult> ChangeMyPassword(ChangePasswordRequestDto request, CancellationToken t)
+    {
+        try
+        {
+            await users.ChangePasswordAsync(CurrentUserId(), request, t);
+            return NoContent();
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
         }
     }
 

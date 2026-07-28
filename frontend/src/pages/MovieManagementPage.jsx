@@ -139,7 +139,7 @@ export default function MovieManagementPage({
       <div className="management-heading">
         <div>
           <p className="eyebrow">CINEMA MANAGER</p>
-          <h1>Manage films</h1>
+          <h1>Manage movies</h1>
           <p>Add a new movie, edit its details or update its cinema status.</p>
         </div>
         <button className="header-link" onClick={onBack}>
