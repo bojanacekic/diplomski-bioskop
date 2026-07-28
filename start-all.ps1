@@ -7,6 +7,7 @@ $applications = @(
     @{ Name = "Movies microservice"; Path = "backend\movies-microservice"; Command = "dotnet run --project src/WebAPI/Movies.WebAPI.csproj" },
     @{ Name = "Hall management microservice"; Path = "backend\hall-management-microservice"; Command = "dotnet run --project src/WebAPI/Halls.WebAPI.csproj" },
     @{ Name = "Screenings microservice"; Path = "backend\screenings-microservice"; Command = "dotnet run --project src/WebAPI/Screenings.WebAPI.csproj" },
+    @{ Name = "Reservations microservice"; Path = "backend\reservations-microservice"; Command = "dotnet run --project src/WebAPI/Reservations.WebAPI.csproj" },
     @{ Name = "API Gateway"; Path = "backend\gateway-api"; Command = "dotnet run --project src/WebAPI/GatewayApi.WebAPI.csproj" },
     @{ Name = "React frontend"; Path = "frontend"; Command = "npm run dev" }
 )
