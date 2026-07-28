@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import odysseyPoster from "../assets/odyssey-vertical.jpg";
+import invitePoster from "../assets/invite-vertical.jpg";
+import toyStoryPoster from "../assets/toy-story-vertical.jpg";
+import spiderManPoster from "../assets/spider-man-vertical.jpg";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 
@@ -7,6 +11,31 @@ const formatDateTime = (value) =>
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+
+const verticalPosters = [
+  { terms: ["odyssey", "odiseja"], source: odysseyPoster },
+  { terms: ["invite", "poziv"], source: invitePoster },
+  { terms: ["toy story", "prica", "priča"], source: toyStoryPoster },
+  { terms: ["spider", "spajder"], source: spiderManPoster },
+];
+
+const verticalPosterFor = (title) =>
+  verticalPosters.find(({ terms }) =>
+    terms.some((term) => title.toLowerCase().includes(term)),
+  )?.source;
+
+const posterPositionFor = (title) => {
+  const normalizedTitle = title.toLowerCase();
+  if (normalizedTitle.includes("toy story") || normalizedTitle.includes("prica") || normalizedTitle.includes("priča"))
+    return "center top";
+  if (normalizedTitle.includes("spider") || normalizedTitle.includes("spajder"))
+    return "center 85%";
+  if (normalizedTitle.includes("odyssey") || normalizedTitle.includes("odiseja"))
+    return "center 83%";
+  if (normalizedTitle.includes("invite") || normalizedTitle.includes("poziv"))
+    return "center 80%";
+  return "center bottom";
+};
 
 export default function MovieDetailsPage({
   movie,
@@ -102,6 +131,8 @@ export default function MovieDetailsPage({
   };
 
   if (!movie) return null;
+  const verticalPoster = verticalPosterFor(movie.title) ?? movie.posterBase64;
+  const posterPosition = posterPositionFor(movie.title);
 
   return (
     <section className="movie-details-page">
@@ -109,7 +140,14 @@ export default function MovieDetailsPage({
         ← Back to movies
       </button>
       <div className="movie-details-hero">
-        {movie.posterBase64 && <img src={movie.posterBase64} alt={`${movie.title} poster`} />}
+        {verticalPoster && (
+          <img
+            className="vertical-movie-poster"
+            src={verticalPoster}
+            alt={`${movie.title} poster`}
+            style={{ objectPosition: posterPosition }}
+          />
+        )}
         <div>
           <p className="eyebrow">SMART CINEMA</p>
           <h1>{movie.title}</h1>

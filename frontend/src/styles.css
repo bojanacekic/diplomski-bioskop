@@ -758,6 +758,10 @@ form input:focus {
   object-fit: cover;
   box-shadow: 0 14px 32px rgba(67, 48, 27, 0.12);
 }
+.movie-details-hero .vertical-movie-poster {
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+}
 .movie-details-hero h1,
 .reservation-section h2 {
   margin: 0.35rem 0 0.8rem;
@@ -837,6 +841,9 @@ form input:focus {
   display: block;
   width: min(100%, 360px);
   margin: 1rem auto 0;
+}
+.reservation-section .form-message {
+  text-align: center;
 }
 
 @media (max-width: 1050px) {
