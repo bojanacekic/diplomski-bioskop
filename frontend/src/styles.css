@@ -487,6 +487,33 @@ form input:focus {
 .password-form {
   margin-top: 1.5rem;
 }
+.reservations-panel {
+  margin-top: 1.5rem;
+}
+.profile-reservations-list {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+.profile-reservation-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+}
+.profile-reservation-card h3 {
+  margin: 0.2rem 0;
+  font-family: "Playfair Display", serif;
+  font-size: 1.2rem;
+}
+.profile-reservation-card p:not(.eyebrow) {
+  margin: 0.2rem 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
 .profile-form {
   max-width: none;
   padding: 1.35rem;
@@ -653,6 +680,12 @@ form input:focus {
   font-size: 0.43rem;
   font-weight: 700;
 }
+.hall-layout-page .seat {
+  width: 34px;
+  height: 34px;
+  font-size: 0.48rem;
+  white-space: nowrap;
+}
 .seat-legend {
   display: flex;
   justify-content: center;
@@ -667,6 +700,101 @@ form input:focus {
   border-radius: 0.15rem;
   background: #e9d7c1;
   vertical-align: middle;
+}
+.movie-details-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem clamp(1.5rem, 7vw, 6rem) 4rem;
+}
+.details-back {
+  margin-bottom: 2rem;
+}
+.movie-details-hero {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.4fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+.movie-details-hero img {
+  width: 100%;
+  min-height: 260px;
+  max-height: 420px;
+  border-radius: 0.8rem;
+  object-fit: cover;
+  box-shadow: 0 14px 32px rgba(67, 48, 27, 0.12);
+}
+.movie-details-hero h1,
+.reservation-section h2 {
+  margin: 0.35rem 0 0.8rem;
+}
+.movie-detail-meta,
+.movie-detail-premiere {
+  color: var(--muted);
+  font-weight: 600;
+}
+.reservation-section {
+  margin-top: 3rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--line);
+}
+.screening-choice-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.8rem;
+  margin: 1.2rem 0;
+}
+.screening-choice {
+  display: grid;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: var(--paper);
+  padding: 1rem;
+  color: var(--ink);
+  text-align: left;
+}
+.screening-choice span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.screening-choice.active {
+  border-color: var(--gold);
+  background: var(--gold-wash);
+}
+.reservation-legend {
+  gap: 1rem;
+}
+.seat-legend .selected {
+  background: var(--gold);
+}
+.seat-legend .reserved {
+  background: #b8aea3;
+}
+.reservation-seat-layout .seat {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  cursor: pointer;
+  font-size: 0.48rem;
+  white-space: nowrap;
+}
+.reservation-seat-layout .seat.selected {
+  background: var(--gold);
+  color: #fff;
+}
+.reservation-seat-layout .seat.reserved {
+  background: #b8aea3;
+  color: #fff;
+  cursor: not-allowed;
+}
+.reservation-seat-layout .seat.guest:not(.reserved) {
+  cursor: default;
+  opacity: 0.8;
+}
+.reserve-button {
+  display: block;
+  width: min(100%, 360px);
+  margin: 1rem auto 0;
 }
 
 @media (max-width: 1050px) {
@@ -771,6 +899,23 @@ form input:focus {
   }
   .movie-info h2 {
     font-size: 1.3rem;
+  }
+  .movie-details-page {
+    padding: 1rem 1rem 2.5rem;
+  }
+  .movie-details-hero {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .movie-details-hero img {
+    max-height: 280px;
+  }
+  .profile-reservation-card {
+    display: block;
+  }
+  .profile-reservation-card .secondary-button {
+    width: 100%;
+    margin-top: 0.85rem;
   }
   .management-heading,
   .management-layout {

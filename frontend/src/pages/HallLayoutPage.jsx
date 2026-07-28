@@ -30,7 +30,7 @@
       </div>
       <div
         className="seat-layout"
-        style={{ gridTemplateColumns: `repeat(${hall.seatsPerRow}, 26px)` }}
+        style={{ gridTemplateColumns: `repeat(${hall.seatsPerRow}, 34px)` }}
       >
         {seats.map(({ row, seat }) => (
           <span

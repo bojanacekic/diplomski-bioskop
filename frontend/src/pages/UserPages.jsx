@@ -254,7 +254,97 @@ export function ProfilePage({ token, onBack }) {
             {changingPassword ? "Changing password..." : "Change password"}
           </button>
         </form>
+        <ReservationsPanel token={token} />
       </div>
+    </section>
+  );
+}
+
+function ReservationsPanel({ token }) {
+  const [reservations, setReservations] = useState([]);
+  const [screenings, setScreenings] = useState([]);
+  const [movies, setMovies] = useState([]);
+  const [halls, setHalls] = useState([]);
+  const [message, setMessage] = useState(null);
+
+  const load = async () => {
+    const [reservationsResponse, screeningsResponse, moviesResponse, hallsResponse] =
+      await Promise.all([
+        fetch(`${api}/api/reservations/me`, { headers: headers(token) }),
+        fetch(`${api}/api/screenings`),
+        fetch(`${api}/api/movies`),
+        fetch(`${api}/api/halls`),
+      ]);
+    if (reservationsResponse.ok) setReservations(await reservationsResponse.json());
+    if (screeningsResponse.ok) setScreenings(await screeningsResponse.json());
+    if (moviesResponse.ok) setMovies(await moviesResponse.json());
+    if (hallsResponse.ok) setHalls(await hallsResponse.json());
+  };
+
+  useEffect(() => {
+    load().catch(() =>
+      setMessage({ type: "error", text: "Reservations are currently unavailable." }),
+    );
+  }, [token]);
+
+  const cancel = async (reservationId) => {
+    if (!window.confirm("Cancel this reservation?")) return;
+    const response = await fetch(`${api}/api/reservations/${reservationId}`, {
+      method: "DELETE",
+      headers: headers(token),
+    });
+    if (response.ok) {
+      setMessage({ type: "success", text: "Reservation cancelled." });
+      load();
+    } else {
+      setMessage({ type: "error", text: "Reservation could not be cancelled." });
+    }
+  };
+
+  const screeningById = (id) => screenings.find((screening) => screening.id === id);
+  const name = (items, id, field) =>
+    items.find((item) => item.id === id)?.[field] ?? "Unavailable";
+
+  return (
+    <section className="movie-form profile-form reservations-panel">
+      <p className="eyebrow">MY RESERVATIONS</p>
+      <h2>Upcoming cinema visits</h2>
+      {message && <p className={`form-message ${message.type}`}>{message.text}</p>}
+      {reservations.length === 0 ? (
+        <p className="profile-help">You do not have any reservations yet.</p>
+      ) : (
+        <div className="profile-reservations-list">
+          {reservations.map((reservation) => {
+            const screening = screeningById(reservation.screeningId);
+            return (
+              <article className="profile-reservation-card" key={reservation.id}>
+                <div>
+                  <p className="eyebrow">{reservation.status === 1 ? "ACTIVE" : "CANCELLED"}</p>
+                  <h3>{screening ? name(movies, screening.movieId, "title") : "Screening unavailable"}</h3>
+                  <p>
+                    {screening
+                      ? new Intl.DateTimeFormat("sr-RS", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(new Date(screening.startsAtUtc))
+                      : ""}
+                    {screening && ` · ${name(halls, screening.hallId, "name")}`}
+                  </p>
+                  <p>Seat: {reservation.seatLabel}</p>
+                </div>
+                {reservation.status === 1 && (
+                  <button
+                    className="secondary-button"
+                    onClick={() => cancel(reservation.id)}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

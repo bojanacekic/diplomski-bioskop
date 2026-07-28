@@ -4,6 +4,7 @@ import MovieManagementPage from "./pages/MovieManagementPage";
 import HallManagementPage from "./pages/HallManagementPage";
 import HallLayoutPage from "./pages/HallLayoutPage";
 import ScreeningManagementPage from "./pages/ScreeningManagementPage";
+import MovieDetailsPage from "./pages/MovieDetailsPage";
 import { ProfilePage, UserManagementPage } from "./pages/UserPages";
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
@@ -24,6 +25,8 @@ function App() {
   const [submitting, setSubmitting] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [selectedHall, setSelectedHall] = useState(null);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [postAuthPage, setPostAuthPage] = useState(null);
   const [session, setSession] = useState(() =>
     JSON.parse(sessionStorage.getItem("smartCinemaSession") || "null"),
   );
@@ -112,7 +115,8 @@ function App() {
       setAccountMenuOpen(false);
       setRegisterForm(emptyRegister);
       setLoginForm(emptyLogin);
-      setPage("home");
+      setPage(postAuthPage ?? "home");
+      setPostAuthPage(null);
     } catch (error) {
       setMessage({ type: "error", text: error.message });
     } finally {
@@ -127,10 +131,11 @@ function App() {
     setPage("home");
   };
 
-  const goAuth = (mode) => {
+  const goAuth = (mode, returnPage = null) => {
     chooseFeaturedMovie();
     setAuthMode(mode);
     setMessage(null);
+    setPostAuthPage(returnPage);
     setPage("auth");
   };
 
@@ -224,6 +229,13 @@ function App() {
           token={session?.accessToken}
           onBack={() => setPage("home")}
         />
+      ) : page === "movie-details" ? (
+        <MovieDetailsPage
+          movie={selectedMovie}
+          token={session?.accessToken}
+          onBack={() => setPage("home")}
+          onSignIn={() => goAuth("login", "movie-details")}
+        />
       ) : page === "users" ? (
         <UserManagementPage
           token={session?.accessToken}
@@ -290,7 +302,14 @@ function App() {
               </div>
             )}
             {movies.map((movie) => (
-              <article className="movie-card" key={movie.id}>
+              <article
+                className="movie-card clickable-card"
+                key={movie.id}
+                onClick={() => {
+                  setSelectedMovie(movie);
+                  setPage("movie-details");
+                }}
+              >
                 {movie.posterBase64 ? (
                   <img src={movie.posterBase64} alt={`${movie.title} poster`} />
                 ) : (
