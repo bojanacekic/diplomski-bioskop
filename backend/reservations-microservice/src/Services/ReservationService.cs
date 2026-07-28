@@ -132,8 +132,10 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
                 seatParts.Length == 2
                 && int.TryParse(seatParts[0], out var row)
                 && int.TryParse(seatParts[1], out var seat)
-                && row is > 0 and <= hall.Rows
-                && seat is > 0 and <= hall.SeatsPerRow;
+                && row > 0
+                && row <= hall.Rows
+                && seat > 0
+                && seat <= hall.SeatsPerRow;
             if (!validSeat)
                 throw new InvalidOperationException("The selected seat does not exist in this hall.");
         }
