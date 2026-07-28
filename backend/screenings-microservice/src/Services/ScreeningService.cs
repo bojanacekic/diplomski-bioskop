@@ -100,8 +100,8 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
             Id = screening.Id,
             MovieId = screening.MovieId,
             HallId = screening.HallId,
-            StartsAtUtc = screening.StartsAtUtc,
-            EndsAtUtc = screening.EndsAtUtc,
+            StartsAtUtc = DateTime.SpecifyKind(screening.StartsAtUtc, DateTimeKind.Utc),
+            EndsAtUtc = DateTime.SpecifyKind(screening.EndsAtUtc, DateTimeKind.Utc),
             BaseTicketPrice = screening.BaseTicketPrice,
             Status = screening.Status,
         };
