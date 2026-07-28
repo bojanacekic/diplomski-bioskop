@@ -38,8 +38,9 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         return reservations.Select(Map).ToList();
     }
 
-    public async Task<IReadOnlyList<string>> GetReservedSeatsAsync(
+    public async Task<IReadOnlyList<ReservedSeatResponseDto>> GetReservedSeatsAsync(
         Guid screeningId,
+        Guid? userId,
         CancellationToken token
     ) =>
         await db.Reservations
@@ -50,39 +51,56 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
                     && reservation.Status == ReservationStatus.Active
             )
             .OrderBy(reservation => reservation.SeatLabel)
-            .Select(reservation => reservation.SeatLabel)
+            .Select(reservation => new ReservedSeatResponseDto
+            {
+                SeatLabel = reservation.SeatLabel,
+                IsMine = userId.HasValue && reservation.UserId == userId.Value,
+            })
             .ToListAsync(token);
 
-    public async Task<ReservationResponseDto> CreateAsync(
+    public async Task<IReadOnlyList<ReservationResponseDto>> CreateAsync(
         Guid userId,
         CreateReservationRequestDto request,
         CancellationToken token
     )
     {
-        var seatLabel = request.SeatLabel.Trim().ToUpperInvariant();
-        await ValidateScreeningAndSeatAsync(request.ScreeningId, seatLabel, token);
-        var seatIsReserved = await db.Reservations.AnyAsync(
+        var seatLabels = request
+            .SeatLabels.Select(seat => seat.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        await ValidateScreeningAndSeatsAsync(request.ScreeningId, seatLabels, token);
+        var reservedSeatExists = await db.Reservations.AnyAsync(
             reservation =>
                 reservation.ScreeningId == request.ScreeningId
-                && reservation.SeatLabel == seatLabel
+                && seatLabels.Contains(reservation.SeatLabel)
                 && reservation.Status == ReservationStatus.Active,
             token
         );
-        if (seatIsReserved)
-            throw new InvalidOperationException("This seat is already reserved for the screening.");
+        if (reservedSeatExists)
+            throw new InvalidOperationException("One or more selected seats are already reserved.");
 
-        var reservation = new Reservation
+        var now = DateTime.UtcNow;
+        var reservations = seatLabels
+            .Select(seatLabel => new Reservation
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                ScreeningId = request.ScreeningId,
+                SeatLabel = seatLabel,
+                ReservedAtUtc = now,
+            })
+            .ToArray();
+
+        db.Reservations.AddRange(reservations);
+        try
         {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            ScreeningId = request.ScreeningId,
-            SeatLabel = seatLabel,
-            ReservedAtUtc = DateTime.UtcNow,
-        };
-
-        db.Reservations.Add(reservation);
-        await db.SaveChangesAsync(token);
-        return Map(reservation);
+            await db.SaveChangesAsync(token);
+        }
+        catch (DbUpdateException)
+        {
+            throw new InvalidOperationException("One or more selected seats are already reserved.");
+        }
+        return reservations.Select(Map).ToList();
     }
 
     public async Task<bool> CancelAsync(Guid id, Guid userId, CancellationToken token)
@@ -100,9 +118,9 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         return true;
     }
 
-    private async Task ValidateScreeningAndSeatAsync(
+    private async Task ValidateScreeningAndSeatsAsync(
         Guid screeningId,
-        string seatLabel,
+        IReadOnlyList<string> seatLabels,
         CancellationToken token
     )
     {
@@ -127,17 +145,20 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
             if (hall is null || !hall.IsActive)
                 throw new InvalidOperationException("The screening hall is unavailable.");
 
-            var seatParts = seatLabel.Split('-', StringSplitOptions.TrimEntries);
-            var validSeat =
-                seatParts.Length == 2
-                && int.TryParse(seatParts[0], out var row)
-                && int.TryParse(seatParts[1], out var seat)
-                && row > 0
-                && row <= hall.Rows
-                && seat > 0
-                && seat <= hall.SeatsPerRow;
-            if (!validSeat)
-                throw new InvalidOperationException("The selected seat does not exist in this hall.");
+            var allSeatsAreValid = seatLabels.All(seatLabel =>
+            {
+                var seatParts = seatLabel.Split('-', StringSplitOptions.TrimEntries);
+                return
+                    seatParts.Length == 2
+                    && int.TryParse(seatParts[0], out var row)
+                    && int.TryParse(seatParts[1], out var seat)
+                    && row > 0
+                    && row <= hall.Rows
+                    && seat > 0
+                    && seat <= hall.SeatsPerRow;
+            });
+            if (!allSeatsAreValid)
+                throw new InvalidOperationException("One or more selected seats do not exist in this hall.");
         }
         catch (HttpRequestException)
         {

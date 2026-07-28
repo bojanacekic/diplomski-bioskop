@@ -72,8 +72,13 @@ app.UseAuthorization();
 
 Guid CurrentUserId(ClaimsPrincipal user)
 {
+    return TryCurrentUserId(user) ?? throw new UnauthorizedAccessException();
+}
+
+Guid? TryCurrentUserId(ClaimsPrincipal user)
+{
     var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub);
-    return Guid.TryParse(userId, out var id) ? id : throw new UnauthorizedAccessException();
+    return Guid.TryParse(userId, out var id) ? id : null;
 }
 
 app.MapGet("/api/reservations/me", async (ClaimsPrincipal user, IReservationService service, CancellationToken token) =>
@@ -82,8 +87,8 @@ app.MapGet("/api/reservations/me", async (ClaimsPrincipal user, IReservationServ
 app.MapGet("/api/reservations", async (Guid? screeningId, IReservationService service, CancellationToken token) =>
     Results.Ok(await service.GetAllAsync(screeningId, token))).RequireAuthorization("ReservationManagement");
 
-app.MapGet("/api/reservations/screenings/{screeningId:guid}/seats", async (Guid screeningId, IReservationService service, CancellationToken token) =>
-    Results.Ok(await service.GetReservedSeatsAsync(screeningId, token)));
+app.MapGet("/api/reservations/screenings/{screeningId:guid}/seats", async (Guid screeningId, ClaimsPrincipal user, IReservationService service, CancellationToken token) =>
+    Results.Ok(await service.GetReservedSeatsAsync(screeningId, TryCurrentUserId(user), token)));
 
 app.MapPost("/api/reservations", async (CreateReservationRequestDto request, ClaimsPrincipal user, IReservationService service, CancellationToken token) =>
 {
@@ -92,8 +97,8 @@ app.MapPost("/api/reservations", async (CreateReservationRequestDto request, Cla
         return Results.ValidationProblem(errors);
     try
     {
-        var reservation = await service.CreateAsync(CurrentUserId(user), request, token);
-        return Results.Created($"/api/reservations/{reservation.Id}", reservation);
+        var reservations = await service.CreateAsync(CurrentUserId(user), request, token);
+        return Results.Created("/api/reservations", reservations);
     }
     catch (InvalidOperationException exception)
     {

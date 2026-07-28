@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ConfirmationDialog from "../components/ConfirmationDialog";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 const headers = (token) => ({
@@ -22,6 +23,7 @@ export function ProfilePage({ token, onBack }) {
   });
   const [passwordMessage, setPasswordMessage] = useState(null);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
   useEffect(() => {
     fetch(`${api}/api/users/me`, { headers: headers(token) })
       .then((response) => response.json())
@@ -157,7 +159,31 @@ export function ProfilePage({ token, onBack }) {
           ← Back to movies
         </button>
       </div>
+      <div className="profile-tabs" role="tablist" aria-label="Profile sections">
+        <button
+          className={activeTab === "details" ? "active" : ""}
+          onClick={() => setActiveTab("details")}
+          role="tab"
+        >
+          Profile details
+        </button>
+        <button
+          className={activeTab === "security" ? "active" : ""}
+          onClick={() => setActiveTab("security")}
+          role="tab"
+        >
+          Security
+        </button>
+        <button
+          className={activeTab === "reservations" ? "active" : ""}
+          onClick={() => setActiveTab("reservations")}
+          role="tab"
+        >
+          My reservations
+        </button>
+      </div>
       <div className="profile-layout">
+        {activeTab === "details" && (
         <form className="movie-form profile-form" onSubmit={save}>
           <p className="eyebrow">PERSONAL DETAILS</p>
           <h2>Account information</h2>
@@ -197,7 +223,9 @@ export function ProfilePage({ token, onBack }) {
             {saving ? "Saving..." : "Save changes"}
           </button>
         </form>
-        <form className="movie-form profile-form password-form" onSubmit={changePassword}>
+        )}
+        {activeTab === "security" && (
+        <form className="movie-form profile-form" onSubmit={changePassword}>
           <p className="eyebrow">SECURITY</p>
           <h2>Change password</h2>
           <p className="profile-help">
@@ -254,7 +282,8 @@ export function ProfilePage({ token, onBack }) {
             {changingPassword ? "Changing password..." : "Change password"}
           </button>
         </form>
-        <ReservationsPanel token={token} />
+        )}
+        {activeTab === "reservations" && <ReservationsPanel token={token} />}
       </div>
     </section>
   );
@@ -266,6 +295,7 @@ function ReservationsPanel({ token }) {
   const [movies, setMovies] = useState([]);
   const [halls, setHalls] = useState([]);
   const [message, setMessage] = useState(null);
+  const [confirmReservationId, setConfirmReservationId] = useState(null);
 
   const load = async () => {
     const [reservationsResponse, screeningsResponse, moviesResponse, hallsResponse] =
@@ -288,7 +318,6 @@ function ReservationsPanel({ token }) {
   }, [token]);
 
   const cancel = async (reservationId) => {
-    if (!window.confirm("Cancel this reservation?")) return;
     const response = await fetch(`${api}/api/reservations/${reservationId}`, {
       method: "DELETE",
       headers: headers(token),
@@ -335,7 +364,7 @@ function ReservationsPanel({ token }) {
                 {reservation.status === 1 && (
                   <button
                     className="secondary-button"
-                    onClick={() => cancel(reservation.id)}
+                    onClick={() => setConfirmReservationId(reservation.id)}
                   >
                     Cancel
                   </button>
@@ -345,6 +374,18 @@ function ReservationsPanel({ token }) {
           })}
         </div>
       )}
+      <ConfirmationDialog
+        isOpen={Boolean(confirmReservationId)}
+        title="Cancel this reservation?"
+        message="The selected seats will become available again."
+        confirmLabel="Cancel reservation"
+        onConfirm={() => {
+          const reservationId = confirmReservationId;
+          setConfirmReservationId(null);
+          cancel(reservationId);
+        }}
+        onClose={() => setConfirmReservationId(null)}
+      />
     </section>
   );
 }
@@ -353,6 +394,7 @@ export function UserManagementPage({ token, onBack }) {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState(null);
+  const [confirmDeactivateId, setConfirmDeactivateId] = useState(null);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -388,13 +430,11 @@ export function UserManagementPage({ token, onBack }) {
     load();
   };
   const deactivate = async (id) => {
-    if (window.confirm("Deactivate this user?")) {
-      await fetch(`${api}/api/users/${id}/deactivate`, {
-        method: "PATCH",
-        headers: headers(token),
-      });
-      load();
-    }
+    await fetch(`${api}/api/users/${id}/deactivate`, {
+      method: "PATCH",
+      headers: headers(token),
+    });
+    load();
   };
   const openEdit = (user) => {
     setEditingUser(user);
@@ -457,7 +497,7 @@ export function UserManagementPage({ token, onBack }) {
               {user.isActive && (
                 <button
                   className="danger-button"
-                  onClick={() => deactivate(user.id)}
+                  onClick={() => setConfirmDeactivateId(user.id)}
                 >
                   Deactivate
                 </button>
@@ -534,6 +574,18 @@ export function UserManagementPage({ token, onBack }) {
           </form>
         </div>
       )}
+      <ConfirmationDialog
+        isOpen={Boolean(confirmDeactivateId)}
+        title="Deactivate this user?"
+        message="The user will no longer be able to sign in."
+        confirmLabel="Deactivate user"
+        onConfirm={() => {
+          const userId = confirmDeactivateId;
+          setConfirmDeactivateId(null);
+          deactivate(userId);
+        }}
+        onClose={() => setConfirmDeactivateId(null)}
+      />
     </section>
   );
 }

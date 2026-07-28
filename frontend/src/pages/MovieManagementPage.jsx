@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ConfirmationDialog from "../components/ConfirmationDialog";
 import { validateMovieForm } from "../utils/movieValidation";
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
@@ -29,6 +30,7 @@ export default function MovieManagementPage({
   const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState({});
+  const [confirmWithdrawId, setConfirmWithdrawId] = useState(null);
 
   const loadMovies = async () => {
     const response = await fetch(
@@ -120,8 +122,6 @@ export default function MovieManagementPage({
   };
 
   const withdrawMovie = async (id) => {
-    if (!window.confirm("Withdraw this movie from the public catalogue?"))
-      return;
     const response = await fetch(`${apiUrl}/api/movies/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -262,7 +262,7 @@ export default function MovieManagementPage({
                 <button
                   type="button"
                   className="danger-button"
-                  onClick={() => withdrawMovie(editingId)}
+                  onClick={() => setConfirmWithdrawId(editingId)}
                 >
                   Withdraw
                 </button>
@@ -325,6 +325,18 @@ export default function MovieManagementPage({
           </div>
         </div>
       </div>
+      <ConfirmationDialog
+        isOpen={Boolean(confirmWithdrawId)}
+        title="Withdraw this movie?"
+        message="The movie will be removed from the public catalogue."
+        confirmLabel="Withdraw movie"
+        onConfirm={() => {
+          const movieId = confirmWithdrawId;
+          setConfirmWithdrawId(null);
+          withdrawMovie(movieId);
+        }}
+        onClose={() => setConfirmWithdrawId(null)}
+      />
     </section>
   );
 }

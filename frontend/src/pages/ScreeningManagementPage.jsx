@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ConfirmationDialog from "../components/ConfirmationDialog";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 const empty = {
@@ -18,6 +19,7 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
   const [form, setForm] = useState(empty);
   const [editing, setEditing] = useState(null);
   const [message, setMessage] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const load = async () => {
     const [moviesResponse, hallsResponse, screeningsResponse] =
       await Promise.all([
@@ -86,7 +88,7 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
     }
   };
   const deleteScreening = async () => {
-    if (!editing || !window.confirm("Delete this screening?")) return;
+    if (!editing) return;
     const response = await fetch(`${api}/api/screenings/${editing.id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -222,7 +224,7 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
                 <button
                   type="button"
                   className="danger-button"
-                  onClick={deleteScreening}
+                  onClick={() => setConfirmDelete(true)}
                 >
                   Delete
                 </button>
@@ -263,6 +265,17 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
           </div>
         </div>
       </div>
+      <ConfirmationDialog
+        isOpen={confirmDelete}
+        title="Delete this screening?"
+        message="This scheduled screening will be permanently removed."
+        confirmLabel="Delete screening"
+        onConfirm={() => {
+          setConfirmDelete(false);
+          deleteScreening();
+        }}
+        onClose={() => setConfirmDelete(false)}
+      />
     </section>
   );
 }

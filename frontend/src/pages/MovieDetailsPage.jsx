@@ -18,14 +18,14 @@ export default function MovieDetailsPage({
   const [halls, setHalls] = useState([]);
   const [selectedScreeningId, setSelectedScreeningId] = useState("");
   const [reservedSeats, setReservedSeats] = useState([]);
-  const [selectedSeat, setSelectedSeat] = useState("");
+  const [selectedSeats, setSelectedSeats] = useState([]);
   const [message, setMessage] = useState(null);
 
   const loadReservedSeats = async (screeningId) => {
     if (!screeningId) return setReservedSeats([]);
-    const response = await fetch(
-      `${api}/api/reservations/screenings/${screeningId}/seats`,
-    );
+    const response = await fetch(`${api}/api/reservations/screenings/${screeningId}/seats`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     if (response.ok) setReservedSeats(await response.json());
   };
 
@@ -48,7 +48,7 @@ export default function MovieDetailsPage({
   }, [movie?.id]);
 
   useEffect(() => {
-    setSelectedSeat("");
+    setSelectedSeats([]);
     loadReservedSeats(selectedScreeningId);
   }, [selectedScreeningId]);
 
@@ -76,8 +76,8 @@ export default function MovieDetailsPage({
       onSignIn();
       return;
     }
-    if (!selectedScreeningId || !selectedSeat) {
-      setMessage({ type: "error", text: "Select a screening and a seat." });
+    if (!selectedScreeningId || selectedSeats.length === 0) {
+      setMessage({ type: "error", text: "Select a screening and at least one seat." });
       return;
     }
     const response = await fetch(`${api}/api/reservations`, {
@@ -86,15 +86,18 @@ export default function MovieDetailsPage({
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ screeningId: selectedScreeningId, seatLabel: selectedSeat }),
+      body: JSON.stringify({ screeningId: selectedScreeningId, seatLabels: selectedSeats }),
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       setMessage({ type: "error", text: payload.message ?? "Reservation could not be created." });
       return;
     }
-    setMessage({ type: "success", text: `Seat ${selectedSeat} has been reserved.` });
-    setSelectedSeat("");
+    setMessage({
+      type: "success",
+      text: `${selectedSeats.length} seat${selectedSeats.length === 1 ? "" : "s"} reserved successfully.`,
+    });
+    setSelectedSeats([]);
     loadReservedSeats(selectedScreeningId);
   };
 
@@ -149,17 +152,26 @@ export default function MovieDetailsPage({
               <span><i /> Available</span>
               <span><i className="selected" /> Selected</span>
               <span><i className="reserved" /> Reserved</span>
+              {token && <span><i className="mine" /> My reservation</span>}
             </div>
             <div className="seat-layout reservation-seat-layout" style={{ gridTemplateColumns: `repeat(${selectedHall.seatsPerRow}, 34px)` }}>
               {seats.map((seat) => {
-                const isReserved = reservedSeats.includes(seat);
-                const isSelected = selectedSeat === seat;
+                const reservation = reservedSeats.find((item) => item.seatLabel === seat);
+                const isReserved = Boolean(reservation);
+                const isMine = reservation?.isMine;
+                const isSelected = selectedSeats.includes(seat);
                 return (
                   <button
-                    className={`seat ${isReserved ? "reserved" : ""} ${isSelected ? "selected" : ""} ${!token ? "guest" : ""}`}
+                    className={`seat ${isReserved ? "reserved" : ""} ${isMine ? "mine" : ""} ${isSelected ? "selected" : ""} ${!token ? "guest" : ""}`}
                     disabled={isReserved || !token}
                     key={seat}
-                    onClick={() => setSelectedSeat(seat)}
+                    onClick={() =>
+                      setSelectedSeats((currentSeats) =>
+                        currentSeats.includes(seat)
+                          ? currentSeats.filter((currentSeat) => currentSeat !== seat)
+                          : [...currentSeats, seat],
+                      )
+                    }
                     title={token ? `Seat ${seat}` : "Sign in to select a seat"}
                   >
                     {seat}
@@ -169,7 +181,9 @@ export default function MovieDetailsPage({
             </div>
             {message && <p className={`form-message ${message.type}`}>{message.text}</p>}
             <button className="submit-button reserve-button" onClick={reserve}>
-              {token ? "Reserve selected seat" : "Sign in to reserve"}
+              {token
+                ? `Reserve ${selectedSeats.length || "selected"} seat${selectedSeats.length === 1 ? "" : "s"}`
+                : "Sign in to reserve"}
             </button>
           </>
         )}

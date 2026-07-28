@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ConfirmationDialog from "../components/ConfirmationDialog";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 const empty = { name: "", type: 0, rows: "", seatsPerRow: "" };
@@ -9,6 +10,7 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
   const [form, setForm] = useState(empty);
   const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const load = async () => {
     const response = await fetch(
       `${api}/api/halls${search ? `?search=${encodeURIComponent(search)}` : ""}`,
@@ -34,7 +36,7 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
     setMessage("");
   };
   const deleteHall = async () => {
-    if (!editingId || !window.confirm("Delete this hall?")) return;
+    if (!editingId) return;
     const response = await fetch(`${api}/api/halls/${editingId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -164,7 +166,7 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
                 <button
                   type="button"
                   className="danger-button"
-                  onClick={deleteHall}
+                  onClick={() => setConfirmDelete(true)}
                 >
                   Delete
                 </button>
@@ -216,6 +218,17 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
           </div>
         </div>
       </div>
+      <ConfirmationDialog
+        isOpen={confirmDelete}
+        title="Delete this hall?"
+        message="This action cannot be undone."
+        confirmLabel="Delete hall"
+        onConfirm={() => {
+          setConfirmDelete(false);
+          deleteHall();
+        }}
+        onClose={() => setConfirmDelete(false)}
+      />
     </section>
   );
 }
