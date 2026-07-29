@@ -67,7 +67,10 @@ export default function MovieDetailsPage({
           : [];
         const loadedHalls = hallsResponse.ok ? await hallsResponse.json() : [];
         const available = loadedScreenings.filter(
-          (screening) => screening.movieId === movie.id && screening.status < 2,
+          (screening) =>
+            screening.movieId === movie.id &&
+            screening.status < 2 &&
+            new Date(screening.startsAtUtc) > new Date(),
         );
         setScreenings(available);
         setHalls(loadedHalls);

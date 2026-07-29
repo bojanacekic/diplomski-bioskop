@@ -136,6 +136,10 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
                 throw new InvalidOperationException("The selected screening does not exist.");
             if (screening.Status is 2 or 3)
                 throw new InvalidOperationException("Reservations are not available for this screening.");
+            if (DateTime.SpecifyKind(screening.StartsAtUtc, DateTimeKind.Utc) <= DateTime.UtcNow)
+                throw new InvalidOperationException(
+                    "Reservations are no longer available because this screening has already started."
+                );
 
             var hall = await GetFromGatewayAsync<HallDetailsDto>(
                 gateway,
