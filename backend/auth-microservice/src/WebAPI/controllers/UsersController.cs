@@ -59,6 +59,25 @@ public sealed class UsersController(IUserManagementService users) : ControllerBa
     public async Task<IActionResult> Search(string? search, CancellationToken t) =>
         Ok(await users.SearchAsync(search, t));
 
+    [HttpGet("{id:guid}/reservation-customer")]
+    [Authorize(Roles = "CinemaManager,Administrator")]
+    public async Task<IActionResult> ReservationCustomer(Guid id, CancellationToken t)
+    {
+        var user = await users.GetAsync(id, t);
+
+        return user is null
+            ? NotFound()
+            : Ok(
+                new ReservationCustomerResponseDto
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                }
+            );
+    }
+
     [HttpPut("{id:guid}")]
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Update(Guid id, UpdateProfileRequestDto r, CancellationToken t)

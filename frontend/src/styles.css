@@ -845,6 +845,37 @@ form input:focus {
 .reservation-section .form-message {
   text-align: center;
 }
+.reservation-search {
+  margin: 0 0 1.25rem auto;
+}
+.reservation-management-list {
+  max-width: 100%;
+}
+.reservation-management-card {
+  align-items: center;
+  gap: 1.5rem;
+}
+.reservation-facts {
+  display: flex;
+  gap: 2rem;
+  margin: 0;
+  min-width: 260px;
+}
+.reservation-facts div {
+  display: grid;
+  gap: 0.15rem;
+}
+.reservation-facts dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.reservation-facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+.reservation-facts small {
+  color: var(--muted);
+}
 
 @media (max-width: 1050px) {
   .movies-page,
@@ -998,6 +1029,16 @@ form input:focus {
   }
   .manage-actions {
     margin-top: 1rem;
+  }
+  .reservation-management-card,
+  .reservation-facts {
+    display: block;
+  }
+  .reservation-facts {
+    margin-top: 1rem;
+  }
+  .reservation-facts div + div {
+    margin-top: 0.7rem;
   }
   .secondary-button,
   .danger-button {
