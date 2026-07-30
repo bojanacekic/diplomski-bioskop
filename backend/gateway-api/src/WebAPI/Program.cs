@@ -32,6 +32,10 @@ var reservationsServiceBaseUrl =
     builder.Configuration["Services:ReservationsBaseUrl"]
     ?? builder.Configuration["Services__ReservationsBaseUrl"]
     ?? throw new InvalidOperationException("Services:ReservationsBaseUrl is not configured.");
+var ticketsServiceBaseUrl =
+    builder.Configuration["Services:TicketsBaseUrl"]
+    ?? builder.Configuration["Services__TicketsBaseUrl"]
+    ?? throw new InvalidOperationException("Services:TicketsBaseUrl is not configured.");
 var allowedOrigin =
     builder.Configuration["Cors:AllowedOrigin"]
     ?? builder.Configuration["Cors__AllowedOrigin"]
@@ -90,6 +94,12 @@ builder
                 ClusterId = "reservations-cluster",
                 Match = new RouteMatch { Path = "/api/reservations/{**catch-all}" },
             },
+            new RouteConfig
+            {
+                RouteId = "tickets-route",
+                ClusterId = "tickets-cluster",
+                Match = new RouteMatch { Path = "/api/tickets/{**catch-all}" },
+            },
         ],
         [
             new ClusterConfig
@@ -138,6 +148,17 @@ builder
                     ["reservations-service"] = new()
                     {
                         Address = $"{reservationsServiceBaseUrl.TrimEnd('/')}/",
+                    },
+                },
+            },
+            new ClusterConfig
+            {
+                ClusterId = "tickets-cluster",
+                Destinations = new Dictionary<string, DestinationConfig>
+                {
+                    ["tickets-service"] = new()
+                    {
+                        Address = $"{ticketsServiceBaseUrl.TrimEnd('/')}/",
                     },
                 },
             },
