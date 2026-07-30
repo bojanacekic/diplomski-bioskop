@@ -62,6 +62,7 @@ var gatewayBaseUrl =
 builder.WebHost.UseUrls(ticketsUrl);
 builder.Services.AddDbContext<TicketsDbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddScoped<ITicketPurchaseService, TicketPurchaseService>();
+builder.Services.AddSingleton<TicketPdfService>();
 builder.Services.AddHttpClient(
     "Gateway",
     client => client.BaseAddress = new Uri($"{gatewayBaseUrl.TrimEnd('/')}/")
@@ -151,6 +152,32 @@ app.MapPost(
                     statusCode: StatusCodes.Status503ServiceUnavailable
                 );
             }
+        }
+    )
+    .RequireAuthorization();
+
+app.MapGet(
+        "/api/tickets/{id:guid}/pdf",
+        async (
+            Guid id,
+            HttpRequest httpRequest,
+            ClaimsPrincipal user,
+            ITicketPurchaseService service,
+            TicketPdfService ticketPdfService,
+            CancellationToken token
+        ) =>
+        {
+            var ticket = await service.GetPdfDataAsync(
+                id,
+                CurrentUserId(user),
+                httpRequest.Headers.Authorization.ToString(),
+                token
+            );
+            if (ticket is null)
+                return Results.NotFound();
+
+            var fileName = $"smart-cinema-ticket-{ticket.TicketNumber}.pdf";
+            return Results.File(ticketPdfService.Create(ticket), "application/pdf", fileName);
         }
     )
     .RequireAuthorization();

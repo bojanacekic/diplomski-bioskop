@@ -10,6 +10,7 @@ public sealed class TicketPurchaseConfiguration : IEntityTypeConfiguration<Ticke
     {
         builder.ToTable("TicketPurchases");
         builder.HasKey(ticket => ticket.Id);
+        builder.Property(ticket => ticket.SeatLabel).HasMaxLength(10).IsRequired();
         builder.Property(ticket => ticket.TicketNumber).HasMaxLength(32).IsRequired();
         builder.Property(ticket => ticket.PricePaid).HasPrecision(10, 2);
         builder.HasIndex(ticket => ticket.ReservationId).IsUnique();

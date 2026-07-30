@@ -15,4 +15,11 @@ public interface ITicketPurchaseService
         PurchaseTicketRequestDto request,
         CancellationToken token
     );
+
+    Task<TicketPdfDataDto?> GetPdfDataAsync(
+        Guid ticketId,
+        Guid userId,
+        string authorizationHeader,
+        CancellationToken token
+    );
 }
