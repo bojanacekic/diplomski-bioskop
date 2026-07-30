@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ConfirmationDialog from "../components/ConfirmationDialog";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
@@ -24,6 +24,29 @@ export function ProfilePage({ token, onBack }) {
   const [passwordMessage, setPasswordMessage] = useState(null);
   const [changingPassword, setChangingPassword] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const [profileMinHeight, setProfileMinHeight] = useState(null);
+  const restoreScrollPosition = useRef(null);
+  const changeProfileTab = (tab) => {
+    restoreScrollPosition.current = window.scrollY;
+    setProfileMinHeight(
+      Math.max(
+        document.documentElement.scrollHeight,
+        window.scrollY + window.innerHeight,
+      ),
+    );
+    setActiveTab(tab);
+  };
+  useLayoutEffect(() => {
+    if (restoreScrollPosition.current === null)
+      return;
+
+    const position = restoreScrollPosition.current;
+    const frame = requestAnimationFrame(() => {
+      window.scrollTo(0, position);
+      restoreScrollPosition.current = null;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeTab]);
   useEffect(() => {
     fetch(`${api}/api/users/me`, { headers: headers(token) })
       .then((response) => response.json())
@@ -162,34 +185,37 @@ export function ProfilePage({ token, onBack }) {
       <div className="profile-tabs" role="tablist" aria-label="Profile sections">
         <button
           className={activeTab === "details" ? "active" : ""}
-          onClick={() => setActiveTab("details")}
+          onClick={() => changeProfileTab("details")}
           role="tab"
         >
           Profile details
         </button>
         <button
           className={activeTab === "security" ? "active" : ""}
-          onClick={() => setActiveTab("security")}
+          onClick={() => changeProfileTab("security")}
           role="tab"
         >
           Security
         </button>
         <button
           className={activeTab === "reservations" ? "active" : ""}
-          onClick={() => setActiveTab("reservations")}
+          onClick={() => changeProfileTab("reservations")}
           role="tab"
         >
           My reservations
         </button>
         <button
           className={activeTab === "tickets" ? "active" : ""}
-          onClick={() => setActiveTab("tickets")}
+          onClick={() => changeProfileTab("tickets")}
           role="tab"
         >
           My tickets
         </button>
       </div>
-      <div className="profile-layout">
+      <div
+        className="profile-layout"
+        style={profileMinHeight ? { minHeight: profileMinHeight } : undefined}
+      >
         {activeTab === "details" && (
         <form className="movie-form profile-form" onSubmit={save}>
           <p className="eyebrow">PERSONAL DETAILS</p>
@@ -447,6 +473,7 @@ function TicketsPanel({ token }) {
   const [screenings, setScreenings] = useState([]);
   const [movies, setMovies] = useState([]);
   const [halls, setHalls] = useState([]);
+  const [reservations, setReservations] = useState([]);
   const [message, setMessage] = useState(null);
 
   useEffect(() => {
@@ -455,13 +482,15 @@ function TicketsPanel({ token }) {
       fetch(`${api}/api/screenings`),
       fetch(`${api}/api/movies`),
       fetch(`${api}/api/halls`),
+      fetch(`${api}/api/reservations/me`, { headers: headers(token) }),
     ])
-      .then(async ([ticketsResponse, screeningsResponse, moviesResponse, hallsResponse]) => {
+      .then(async ([ticketsResponse, screeningsResponse, moviesResponse, hallsResponse, reservationsResponse]) => {
         if (!ticketsResponse.ok) throw new Error();
         setTickets(await ticketsResponse.json());
         setScreenings(screeningsResponse.ok ? await screeningsResponse.json() : []);
         setMovies(moviesResponse.ok ? await moviesResponse.json() : []);
         setHalls(hallsResponse.ok ? await hallsResponse.json() : []);
+        setReservations(reservationsResponse.ok ? await reservationsResponse.json() : []);
       })
       .catch(() =>
         setMessage({ type: "error", text: "Tickets are currently unavailable." }),
@@ -469,8 +498,28 @@ function TicketsPanel({ token }) {
   }, [token]);
 
   const screeningById = (id) => screenings.find((screening) => screening.id === id);
+  const reservationById = (id) =>
+    reservations.find((reservation) => reservation.id === id);
   const name = (items, id, field) =>
     items.find((item) => item.id === id)?.[field] ?? "Unavailable";
+  const downloadTicket = async (ticket) => {
+    setMessage(null);
+    const response = await fetch(`${api}/api/tickets/${ticket.id}/pdf`, {
+      headers: headers(token),
+    });
+
+    if (!response.ok) {
+      setMessage({ type: "error", text: "Ticket PDF could not be downloaded." });
+      return;
+    }
+
+    const file = await response.blob();
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(file);
+    link.download = `smart-cinema-ticket-${ticket.ticketNumber}.pdf`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
 
   return (
     <section className="movie-form profile-form reservations-panel">
@@ -483,6 +532,8 @@ function TicketsPanel({ token }) {
         <div className="profile-reservations-list">
           {tickets.map((ticket) => {
             const screening = screeningById(ticket.screeningId);
+            const reservation = reservationById(ticket.reservationId);
+            const seatLabel = ticket.seatLabel || reservation?.seatLabel || "Not recorded";
             return (
               <article className="profile-reservation-card" key={ticket.id}>
                 <div>
@@ -497,9 +548,18 @@ function TicketsPanel({ token }) {
                       : ""}
                     {screening && " · " + name(halls, screening.hallId, "name")}
                   </p>
+                  <p>Seat: {seatLabel}</p>
                   <p className="ticket-number">Ticket no. {ticket.ticketNumber}</p>
                 </div>
-                <strong>{ticket.pricePaid} RSD</strong>
+                <div className="ticket-actions">
+                  <strong>{ticket.pricePaid} RSD</strong>
+                  <button
+                    className="secondary-button"
+                    onClick={() => downloadTicket(ticket)}
+                  >
+                    Download PDF
+                  </button>
+                </div>
               </article>
             );
           })}

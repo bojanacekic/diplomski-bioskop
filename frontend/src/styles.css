@@ -854,6 +854,11 @@ form input:focus {
   color: var(--muted);
   font-weight: 700;
 }
+.ticket-actions {
+  display: grid;
+  justify-items: end;
+  gap: 0.75rem;
+}
 .reservation-search {
   margin: 0 0 1.25rem auto;
 }
