@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import lightLogo from "./assets/smart-cinema-logo-light.png";
 import MovieManagementPage from "./pages/MovieManagementPage";
 import HallManagementPage from "./pages/HallManagementPage";
@@ -25,6 +25,7 @@ function App() {
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
   const [selectedHall, setSelectedHall] = useState(null);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [postAuthPage, setPostAuthPage] = useState(null);
@@ -77,6 +78,27 @@ function App() {
       controller.abort();
     };
   }, [search, moviesRefreshKey]);
+
+  useEffect(() => {
+    if (!accountMenuOpen)
+      return;
+
+    const closeWhenClickedOutside = (event) => {
+      if (!accountMenuRef.current?.contains(event.target))
+        setAccountMenuOpen(false);
+    };
+    const closeWhenEscapeIsPressed = (event) => {
+      if (event.key === "Escape")
+        setAccountMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", closeWhenClickedOutside);
+    document.addEventListener("keydown", closeWhenEscapeIsPressed);
+    return () => {
+      document.removeEventListener("mousedown", closeWhenClickedOutside);
+      document.removeEventListener("keydown", closeWhenEscapeIsPressed);
+    };
+  }, [accountMenuOpen]);
 
   const changeForm = (setter) => (event) =>
     setter((state) => ({ ...state, [event.target.name]: event.target.value }));
@@ -151,7 +173,7 @@ function App() {
         </button>
         <nav>
           {session ? (
-            <div className="account-menu">
+            <div className="account-menu" ref={accountMenuRef}>
               <button
                 className="account-trigger"
                 onClick={() => setAccountMenuOpen((open) => !open)}
