@@ -181,6 +181,13 @@ export function ProfilePage({ token, onBack }) {
         >
           My reservations
         </button>
+        <button
+          className={activeTab === "tickets" ? "active" : ""}
+          onClick={() => setActiveTab("tickets")}
+          role="tab"
+        >
+          My tickets
+        </button>
       </div>
       <div className="profile-layout">
         {activeTab === "details" && (
@@ -284,6 +291,7 @@ export function ProfilePage({ token, onBack }) {
         </form>
         )}
         {activeTab === "reservations" && <ReservationsPanel token={token} />}
+        {activeTab === "tickets" && <TicketsPanel token={token} />}
       </div>
     </section>
   );
@@ -294,21 +302,24 @@ function ReservationsPanel({ token }) {
   const [screenings, setScreenings] = useState([]);
   const [movies, setMovies] = useState([]);
   const [halls, setHalls] = useState([]);
+  const [tickets, setTickets] = useState([]);
   const [message, setMessage] = useState(null);
   const [confirmReservationId, setConfirmReservationId] = useState(null);
 
   const load = async () => {
-    const [reservationsResponse, screeningsResponse, moviesResponse, hallsResponse] =
+    const [reservationsResponse, screeningsResponse, moviesResponse, hallsResponse, ticketsResponse] =
       await Promise.all([
         fetch(`${api}/api/reservations/me`, { headers: headers(token) }),
         fetch(`${api}/api/screenings`),
         fetch(`${api}/api/movies`),
         fetch(`${api}/api/halls`),
+        fetch(`${api}/api/tickets/me`, { headers: headers(token) }),
       ]);
     if (reservationsResponse.ok) setReservations(await reservationsResponse.json());
     if (screeningsResponse.ok) setScreenings(await screeningsResponse.json());
     if (moviesResponse.ok) setMovies(await moviesResponse.json());
     if (hallsResponse.ok) setHalls(await hallsResponse.json());
+    if (ticketsResponse.ok) setTickets(await ticketsResponse.json());
   };
 
   useEffect(() => {
@@ -330,6 +341,26 @@ function ReservationsPanel({ token }) {
     }
   };
 
+  const purchase = async (reservationId) => {
+    setMessage(null);
+    const response = await fetch(`${api}/api/tickets`, {
+      method: "POST",
+      headers: headers(token),
+      body: JSON.stringify({ reservationId }),
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+      setMessage({ type: "success", text: "Ticket purchased successfully." });
+      load();
+    } else {
+      setMessage({
+        type: "error",
+        text: payload.message ?? "Ticket could not be purchased.",
+      });
+    }
+  };
+
   const screeningById = (id) => screenings.find((screening) => screening.id === id);
   const name = (items, id, field) =>
     items.find((item) => item.id === id)?.[field] ?? "Unavailable";
@@ -345,6 +376,11 @@ function ReservationsPanel({ token }) {
         <div className="profile-reservations-list">
           {reservations.map((reservation) => {
             const screening = screeningById(reservation.screeningId);
+            const ticket = tickets.find(
+              (item) => item.reservationId === reservation.id,
+            );
+            const screeningHasPassed =
+              !screening || new Date(screening.startsAtUtc) <= new Date();
             return (
               <article className="profile-reservation-card" key={reservation.id}>
                 <div>
@@ -362,12 +398,28 @@ function ReservationsPanel({ token }) {
                   <p>Seat: {reservation.seatLabel}</p>
                 </div>
                 {reservation.status === 1 && (
-                  <button
-                    className="secondary-button"
-                    onClick={() => setConfirmReservationId(reservation.id)}
-                  >
-                    Cancel
-                  </button>
+                  <div className="manage-actions">
+                    {screeningHasPassed ? (
+                      <span className="ticket-passed">Screening passed</span>
+                    ) : ticket ? (
+                      <span className="ticket-purchased">Ticket purchased</span>
+                    ) : (
+                      <>
+                        <button
+                          className="submit-button"
+                          onClick={() => purchase(reservation.id)}
+                        >
+                          Buy ticket
+                        </button>
+                        <button
+                          className="secondary-button"
+                          onClick={() => setConfirmReservationId(reservation.id)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
               </article>
             );
@@ -386,6 +438,73 @@ function ReservationsPanel({ token }) {
         }}
         onClose={() => setConfirmReservationId(null)}
       />
+    </section>
+  );
+}
+
+function TicketsPanel({ token }) {
+  const [tickets, setTickets] = useState([]);
+  const [screenings, setScreenings] = useState([]);
+  const [movies, setMovies] = useState([]);
+  const [halls, setHalls] = useState([]);
+  const [message, setMessage] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`${api}/api/tickets/me`, { headers: headers(token) }),
+      fetch(`${api}/api/screenings`),
+      fetch(`${api}/api/movies`),
+      fetch(`${api}/api/halls`),
+    ])
+      .then(async ([ticketsResponse, screeningsResponse, moviesResponse, hallsResponse]) => {
+        if (!ticketsResponse.ok) throw new Error();
+        setTickets(await ticketsResponse.json());
+        setScreenings(screeningsResponse.ok ? await screeningsResponse.json() : []);
+        setMovies(moviesResponse.ok ? await moviesResponse.json() : []);
+        setHalls(hallsResponse.ok ? await hallsResponse.json() : []);
+      })
+      .catch(() =>
+        setMessage({ type: "error", text: "Tickets are currently unavailable." }),
+      );
+  }, [token]);
+
+  const screeningById = (id) => screenings.find((screening) => screening.id === id);
+  const name = (items, id, field) =>
+    items.find((item) => item.id === id)?.[field] ?? "Unavailable";
+
+  return (
+    <section className="movie-form profile-form reservations-panel">
+      <p className="eyebrow">MY TICKETS</p>
+      <h2>Purchased tickets</h2>
+      {message && <p className={"form-message " + message.type}>{message.text}</p>}
+      {tickets.length === 0 ? (
+        <p className="profile-help">You have not purchased any tickets yet.</p>
+      ) : (
+        <div className="profile-reservations-list">
+          {tickets.map((ticket) => {
+            const screening = screeningById(ticket.screeningId);
+            return (
+              <article className="profile-reservation-card" key={ticket.id}>
+                <div>
+                  <p className="eyebrow">TICKET</p>
+                  <h3>{screening ? name(movies, screening.movieId, "title") : "Screening unavailable"}</h3>
+                  <p>
+                    {screening
+                      ? new Intl.DateTimeFormat("sr-RS", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        }).format(new Date(screening.startsAtUtc))
+                      : ""}
+                    {screening && " · " + name(halls, screening.hallId, "name")}
+                  </p>
+                  <p className="ticket-number">Ticket no. {ticket.ticketNumber}</p>
+                </div>
+                <strong>{ticket.pricePaid} RSD</strong>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

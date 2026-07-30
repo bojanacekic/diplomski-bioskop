@@ -845,6 +845,15 @@ form input:focus {
 .reservation-section .form-message {
   text-align: center;
 }
+.ticket-purchased,
+.ticket-number {
+  color: var(--gold);
+  font-weight: 700;
+}
+.ticket-passed {
+  color: var(--muted);
+  font-weight: 700;
+}
 .reservation-search {
   margin: 0 0 1.25rem auto;
 }
