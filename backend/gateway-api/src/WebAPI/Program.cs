@@ -36,6 +36,10 @@ var ticketsServiceBaseUrl =
     builder.Configuration["Services:TicketsBaseUrl"]
     ?? builder.Configuration["Services__TicketsBaseUrl"]
     ?? throw new InvalidOperationException("Services:TicketsBaseUrl is not configured.");
+var paymentsServiceBaseUrl =
+    builder.Configuration["Services:PaymentsBaseUrl"]
+    ?? builder.Configuration["Services__PaymentsBaseUrl"]
+    ?? throw new InvalidOperationException("Services:PaymentsBaseUrl is not configured.");
 var allowedOrigin =
     builder.Configuration["Cors:AllowedOrigin"]
     ?? builder.Configuration["Cors__AllowedOrigin"]
@@ -100,6 +104,12 @@ builder
                 ClusterId = "tickets-cluster",
                 Match = new RouteMatch { Path = "/api/tickets/{**catch-all}" },
             },
+            new RouteConfig
+            {
+                RouteId = "payments-route",
+                ClusterId = "payments-cluster",
+                Match = new RouteMatch { Path = "/api/payments/{**catch-all}" },
+            },
         ],
         [
             new ClusterConfig
@@ -159,6 +169,17 @@ builder
                     ["tickets-service"] = new()
                     {
                         Address = $"{ticketsServiceBaseUrl.TrimEnd('/')}/",
+                    },
+                },
+            },
+            new ClusterConfig
+            {
+                ClusterId = "payments-cluster",
+                Destinations = new Dictionary<string, DestinationConfig>
+                {
+                    ["payments-service"] = new()
+                    {
+                        Address = $"{paymentsServiceBaseUrl.TrimEnd('/')}/",
                     },
                 },
             },
