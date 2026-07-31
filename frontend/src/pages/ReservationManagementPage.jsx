@@ -143,13 +143,16 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
         <div className="management-list reservation-management-list">
           {visibleReservations.map((reservation) => {
             const { screening, movie, hall, customer } = reservationDetails(reservation);
-            const isCancelled = reservation.status === 2 || reservation.status === "Cancelled";
+            const isCancelled = reservation.status === 3 || reservation.status === "Cancelled";
+            const isExpired = reservation.status === 4 || reservation.status === "Expired";
             const ticket = tickets.find((item) => item.reservationId === reservation.id);
 
             return (
               <article className="manage-card reservation-management-card" key={reservation.id}>
                 <div>
-                  <p className="eyebrow">{isCancelled ? "CANCELLED" : "ACTIVE RESERVATION"}</p>
+                  <p className="eyebrow">
+                    {isCancelled ? "CANCELLED" : isExpired ? "EXPIRED" : reservation.status === 2 ? "CONFIRMED" : "ACTIVE RESERVATION"}
+                  </p>
                   <h2>{movie?.title ?? "Unknown movie"}</h2>
                   <p>
                     {screening ? formatDateTime(screening.startsAtUtc) : "Unknown screening"} ·{" "}
@@ -171,7 +174,9 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
                     {customer && <small>@{customer.username}</small>}
                   </div>
                 </dl>
-                {isCancelled ? null : ticket ? (
+                {isCancelled ? null : isExpired ? (
+                  <strong className="ticket-passed">Reservation expired</strong>
+                ) : ticket ? (
                   <span className="ticket-purchased">Ticket issued</span>
                 ) : reservation.paymentOption === 1 ? (
                   <button className="submit-button" onClick={() => setCashReservation(reservation)}>

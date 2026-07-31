@@ -824,6 +824,10 @@ form input:focus {
   border-color: var(--gold);
   background: var(--gold-wash);
 }
+.screening-choice.closed {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
 .reservation-legend {
   gap: 1rem;
 }
@@ -877,6 +881,10 @@ form input:focus {
 .ticket-passed {
   color: var(--muted);
   font-weight: 700;
+}
+.reservation-expired-message {
+  color: var(--cinema-red) !important;
+  font-weight: 600;
 }
 .ticket-actions {
   display: grid;

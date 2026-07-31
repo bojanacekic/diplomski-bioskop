@@ -6,6 +6,7 @@ import HallLayoutPage from "./pages/HallLayoutPage";
 import ScreeningManagementPage from "./pages/ScreeningManagementPage";
 import MovieDetailsPage from "./pages/MovieDetailsPage";
 import ReservationManagementPage from "./pages/ReservationManagementPage";
+import TicketValidationPage from "./pages/TicketValidationPage";
 import { ProfilePage, UserManagementPage } from "./pages/UserPages";
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
@@ -224,6 +225,14 @@ function App() {
                       >
                         Manage reservations
                       </button>
+                      <button
+                        onClick={() => {
+                          setPage("ticket-validation");
+                          setAccountMenuOpen(false);
+                        }}
+                      >
+                        Validate tickets
+                      </button>
                     </>
                   )}
                   {isAdministrator && (
@@ -276,6 +285,11 @@ function App() {
         <ScreeningManagementPage accessToken={session?.accessToken} onBack={() => setPage("home")} />
       ) : page === "reservations" ? (
         <ReservationManagementPage
+          accessToken={session?.accessToken}
+          onBack={() => setPage("home")}
+        />
+      ) : page === "ticket-validation" ? (
+        <TicketValidationPage
           accessToken={session?.accessToken}
           onBack={() => setPage("home")}
         />

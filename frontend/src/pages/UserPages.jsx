@@ -453,10 +453,16 @@ function ReservationsPanel({ token }) {
             );
             const screeningHasPassed =
               !screening || new Date(screening.startsAtUtc) <= new Date();
+            const reservationStatus = {
+              1: "ACTIVE",
+              2: "CONFIRMED",
+              3: "CANCELLED",
+              4: "EXPIRED",
+            }[reservation.status] ?? "UNKNOWN";
             return (
               <article className="profile-reservation-card" key={reservation.id}>
                 <div>
-                  <p className="eyebrow">{reservation.status === 1 ? "ACTIVE" : "CANCELLED"}</p>
+                  <p className="eyebrow">{reservationStatus}</p>
                   <h3>{screening ? name(movies, screening.movieId, "title") : "Screening unavailable"}</h3>
                   <p>
                     {screening
@@ -468,6 +474,11 @@ function ReservationsPanel({ token }) {
                     {screening && ` · ${name(halls, screening.hallId, "name")}`}
                   </p>
                   <p>Seat: {reservation.seatLabel}</p>
+                  {reservation.status === 4 && (
+                    <p className="reservation-expired-message">
+                      This reservation expired because it was not paid in time.
+                    </p>
+                  )}
                 </div>
                 {reservation.status === 1 && (
                   <div className="manage-actions">
@@ -571,21 +582,21 @@ function TicketsPanel({ token }) {
     reservations.find((reservation) => reservation.id === id);
   const name = (items, id, field) =>
     items.find((item) => item.id === id)?.[field] ?? "Unavailable";
-  const downloadTicket = async (ticket) => {
+  const downloadDocument = async (ticket, type) => {
     setMessage(null);
-    const response = await fetch(`${api}/api/tickets/${ticket.id}/pdf`, {
+    const response = await fetch(`${api}/api/tickets/${ticket.id}/${type}`, {
       headers: headers(token),
     });
 
     if (!response.ok) {
-      setMessage({ type: "error", text: "Ticket PDF could not be downloaded." });
+      setMessage({ type: "error", text: "Document could not be downloaded." });
       return;
     }
 
     const file = await response.blob();
     const link = document.createElement("a");
     link.href = URL.createObjectURL(file);
-    link.download = `smart-cinema-ticket-${ticket.ticketNumber}.pdf`;
+    link.download = `smart-cinema-${type}-${ticket.ticketNumber}.pdf`;
     link.click();
     URL.revokeObjectURL(link.href);
   };
@@ -624,9 +635,15 @@ function TicketsPanel({ token }) {
                   <strong>{ticket.pricePaid} RSD</strong>
                   <button
                     className="secondary-button"
-                    onClick={() => downloadTicket(ticket)}
+                    onClick={() => downloadDocument(ticket, "pdf")}
                   >
                     Download PDF
+                  </button>
+                  <button
+                    className="secondary-button"
+                    onClick={() => downloadDocument(ticket, "receipt")}
+                  >
+                    Download receipt
                   </button>
                 </div>
               </article>

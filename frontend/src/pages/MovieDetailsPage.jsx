@@ -66,15 +66,19 @@ export default function MovieDetailsPage({
           ? await screeningsResponse.json()
           : [];
         const loadedHalls = hallsResponse.ok ? await hallsResponse.json() : [];
-        const available = loadedScreenings.filter(
+        const matchingScreenings = loadedScreenings.filter(
           (screening) =>
             screening.movieId === movie.id &&
             screening.status < 2 &&
             new Date(screening.startsAtUtc) > new Date(),
         );
-        setScreenings(available);
+        setScreenings(matchingScreenings);
         setHalls(loadedHalls);
-        setSelectedScreeningId(available[0]?.id ?? "");
+        setSelectedScreeningId(
+          matchingScreenings.find(
+            (screening) => new Date(screening.startsAtUtc) > new Date(Date.now() + 30 * 60 * 1000),
+          )?.id ?? "",
+        );
       })
       .catch(() => setMessage({ type: "error", text: "Screenings are currently unavailable." }));
   }, [movie?.id]);
@@ -173,17 +177,26 @@ export default function MovieDetailsPage({
           <p className="state-message">There are no available screenings for this movie yet.</p>
         ) : (
           <div className="screening-choice-list">
-            {screenings.map((screening) => (
-              <button
-                className={screening.id === selectedScreeningId ? "screening-choice active" : "screening-choice"}
-                key={screening.id}
-                onClick={() => setSelectedScreeningId(screening.id)}
-              >
-                <strong>{formatDateTime(screening.startsAtUtc)}</strong>
-                <span>{halls.find((hall) => hall.id === screening.hallId)?.name ?? "Hall"}</span>
-                <span>{screening.baseTicketPrice} RSD</span>
-              </button>
-            ))}
+            {screenings.map((screening) => {
+              const reservationClosed =
+                new Date(screening.startsAtUtc) <= new Date(Date.now() + 30 * 60 * 1000);
+              return (
+                <button
+                  className={`${screening.id === selectedScreeningId ? "screening-choice active" : "screening-choice"} ${reservationClosed ? "closed" : ""}`}
+                  disabled={reservationClosed}
+                  key={screening.id}
+                  onClick={() => setSelectedScreeningId(screening.id)}
+                >
+                  <strong>{formatDateTime(screening.startsAtUtc)}</strong>
+                  <span>{halls.find((hall) => hall.id === screening.hallId)?.name ?? "Hall"}</span>
+                  <span>
+                    {reservationClosed
+                      ? "Reservations close 30 minutes before the screening."
+                      : `${screening.baseTicketPrice} RSD`}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
         {selectedHall && (
