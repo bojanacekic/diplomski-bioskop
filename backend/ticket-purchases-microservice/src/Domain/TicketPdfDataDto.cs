@@ -9,4 +9,5 @@ public sealed class TicketPdfDataDto
     public DateTime StartsAtUtc { get; init; }
     public decimal PricePaid { get; init; }
     public PaymentMethod PaymentMethod { get; init; }
+    public DateTime PurchasedAtUtc { get; init; }
 }

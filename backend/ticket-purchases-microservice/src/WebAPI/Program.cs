@@ -223,6 +223,23 @@ app.MapPost(
     )
     .RequireAuthorization("BoxOfficeSales");
 
+app.MapPost(
+        "/api/tickets/validate-entry",
+        async (
+            TicketValidationRequestDto request,
+            ITicketPurchaseService service,
+            CancellationToken token
+        ) =>
+        {
+            var errors = TicketValidationValidator.Validate(request);
+            if (errors.Count > 0)
+                return Results.ValidationProblem(errors);
+
+            return Results.Ok(await service.ValidateEntryAsync(request, token));
+        }
+    )
+    .RequireAuthorization("BoxOfficeSales");
+
 app.MapGet(
         "/api/tickets/{id:guid}/pdf",
         async (
@@ -245,6 +262,32 @@ app.MapGet(
 
             var fileName = $"smart-cinema-ticket-{ticket.TicketNumber}.pdf";
             return Results.File(ticketPdfService.Create(ticket), "application/pdf", fileName);
+        }
+    )
+    .RequireAuthorization();
+
+app.MapGet(
+        "/api/tickets/{id:guid}/receipt",
+        async (
+            Guid id,
+            HttpRequest httpRequest,
+            ClaimsPrincipal user,
+            ITicketPurchaseService service,
+            TicketPdfService ticketPdfService,
+            CancellationToken token
+        ) =>
+        {
+            var ticket = await service.GetPdfDataAsync(
+                id,
+                CurrentUserId(user),
+                httpRequest.Headers.Authorization.ToString(),
+                token
+            );
+            if (ticket is null)
+                return Results.NotFound();
+
+            var fileName = $"smart-cinema-receipt-{ticket.TicketNumber}.pdf";
+            return Results.File(ticketPdfService.CreateReceipt(ticket), "application/pdf", fileName);
         }
     )
     .RequireAuthorization();

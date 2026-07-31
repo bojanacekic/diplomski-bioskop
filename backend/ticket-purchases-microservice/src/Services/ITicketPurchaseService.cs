@@ -36,4 +36,9 @@ public interface ITicketPurchaseService
         Guid userId,
         CancellationToken token
     );
+
+    Task<TicketValidationResponseDto> ValidateEntryAsync(
+        TicketValidationRequestDto request,
+        CancellationToken token
+    );
 }

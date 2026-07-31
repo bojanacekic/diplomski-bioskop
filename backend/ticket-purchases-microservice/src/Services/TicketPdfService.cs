@@ -1,4 +1,6 @@
 using System.Text;
+using System.Globalization;
+using QRCoder;
 using TicketPurchases.Domain;
 
 namespace TicketPurchases.Services;
@@ -22,6 +24,7 @@ public sealed class TicketPdfService
             $"Seat: {ticket.SeatLabel}",
             $"Price: {ticket.PricePaid:0.00} RSD",
             $"Purchase: {(ticket.PaymentMethod == PaymentMethod.CashAtBoxOffice ? "Cinema box office - cash" : "Online card payment")}",
+            "Scan the QR code at the cinema entrance.",
             "",
             "Please present this ticket at the cinema entrance.",
         };
@@ -43,7 +46,81 @@ public sealed class TicketPdfService
         }
 
         content.AppendLine("ET");
+        AppendQrCode(content, $"SMART-CINEMA|{ticket.TicketNumber}");
         return CreateDocument(content.ToString());
+    }
+
+    public byte[] CreateReceipt(TicketPdfDataDto ticket)
+    {
+        var purchasedAt = DateTime.SpecifyKind(ticket.PurchasedAtUtc, DateTimeKind.Utc)
+            .ToLocalTime()
+            .ToString("dd.MM.yyyy. HH:mm");
+        var lines = new[]
+        {
+            "SMART CINEMA",
+            "FISCAL RECEIPT",
+            $"Receipt number: RC-{ticket.TicketNumber}",
+            $"Ticket number: {ticket.TicketNumber}",
+            "",
+            $"Movie: {ticket.MovieTitle}",
+            $"Hall: {ticket.HallName}",
+            $"Seat: {ticket.SeatLabel}",
+            $"Payment: {(ticket.PaymentMethod == PaymentMethod.CashAtBoxOffice ? "Cash at box office" : "Online card payment")}",
+            $"Total paid: {ticket.PricePaid:0.00} RSD",
+            $"Purchased: {purchasedAt}",
+        };
+
+        return CreateDocument(CreateTextContent(lines));
+    }
+
+    private static string CreateTextContent(IEnumerable<string> lines)
+    {
+        var content = new StringBuilder();
+        var values = lines.ToArray();
+        content.AppendLine("BT");
+        content.AppendLine("/F1 24 Tf");
+        content.AppendLine("60 770 Td");
+        content.AppendLine($"({Escape(values[0])}) Tj");
+        content.AppendLine("/F1 14 Tf");
+        content.AppendLine("0 -42 Td");
+        content.AppendLine($"({Escape(values[1])}) Tj");
+        content.AppendLine("/F1 11 Tf");
+        foreach (var line in values.Skip(2))
+        {
+            content.AppendLine("0 -28 Td");
+            content.AppendLine($"({Escape(line)}) Tj");
+        }
+        content.AppendLine("ET");
+        return content.ToString();
+    }
+
+    private static void AppendQrCode(StringBuilder content, string value)
+    {
+        using var generator = new QRCodeGenerator();
+        using var data = generator.CreateQrCode(value, QRCodeGenerator.ECCLevel.Q);
+        var modules = data.ModuleMatrix;
+        const double size = 130;
+        const double left = 405;
+        const double bottom = 170;
+        var moduleSize = size / modules.Count;
+
+        content.AppendLine("q");
+        content.AppendLine("0 g");
+        for (var row = 0; row < modules.Count; row++)
+        {
+            for (var column = 0; column < modules.Count; column++)
+            {
+                if (!modules[row][column])
+                    continue;
+
+                var x = left + column * moduleSize;
+                var y = bottom + (modules.Count - row - 1) * moduleSize;
+                content.AppendLine(
+                    $"{x.ToString("0.###", CultureInfo.InvariantCulture)} {y.ToString("0.###", CultureInfo.InvariantCulture)} {moduleSize.ToString("0.###", CultureInfo.InvariantCulture)} {moduleSize.ToString("0.###", CultureInfo.InvariantCulture)} re f"
+                );
+            }
+        }
+        content.AppendLine("Q");
     }
 
     private static byte[] CreateDocument(string content)

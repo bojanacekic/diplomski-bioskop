@@ -8,6 +8,7 @@ public sealed class TicketPurchase
     public Guid ScreeningId { get; set; }
     public Guid? PaymentId { get; set; }
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.OnlineCard;
+    public TicketStatus Status { get; set; } = TicketStatus.Valid;
     public string SeatLabel { get; set; } = string.Empty;
     public string TicketNumber { get; set; } = string.Empty;
     public decimal PricePaid { get; set; }

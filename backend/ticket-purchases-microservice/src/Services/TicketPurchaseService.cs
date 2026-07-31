@@ -131,6 +131,9 @@ public sealed class TicketPurchaseService(
             );
         }
 
+        if (!await ConfirmReservationAsync(gateway, authorizationHeader, reservation.Id, token))
+            throw new InvalidOperationException("The ticket was issued, but its reservation could not be confirmed.");
+
         return Map(purchase);
     }
 
@@ -200,6 +203,9 @@ public sealed class TicketPurchaseService(
             throw new InvalidOperationException("A ticket has already been purchased for this reservation.");
         }
 
+        if (!await ConfirmReservationAsync(gateway, authorizationHeader, reservation.Id, token))
+            throw new InvalidOperationException("The ticket was issued, but its reservation could not be confirmed.");
+
         return Map(purchase);
     }
 
@@ -258,6 +264,7 @@ public sealed class TicketPurchaseService(
             StartsAtUtc = screening.StartsAtUtc,
             PricePaid = ticket.PricePaid,
             PaymentMethod = ticket.PaymentMethod,
+            PurchasedAtUtc = DateTime.SpecifyKind(ticket.PurchasedAtUtc, DateTimeKind.Utc),
         };
     }
 
@@ -270,6 +277,45 @@ public sealed class TicketPurchaseService(
             ticket => ticket.ReservationId == reservationId && ticket.UserId == userId,
             token
         );
+
+    public async Task<TicketValidationResponseDto> ValidateEntryAsync(
+        TicketValidationRequestDto request,
+        CancellationToken token
+    )
+    {
+        const string prefix = "SMART-CINEMA|";
+        var ticketNumber = request.Code.Trim();
+        if (ticketNumber.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            ticketNumber = ticketNumber[prefix.Length..];
+
+        var ticket = await db.TicketPurchases.SingleOrDefaultAsync(
+            item => item.TicketNumber == ticketNumber,
+            token
+        );
+        if (ticket is null)
+            return new TicketValidationResponseDto { Message = "Ticket was not found." };
+        if (ticket.Status == TicketStatus.Used)
+            return new TicketValidationResponseDto
+            {
+                TicketNumber = ticket.TicketNumber,
+                Message = "This ticket has already been used.",
+            };
+        if (ticket.Status != TicketStatus.Valid)
+            return new TicketValidationResponseDto
+            {
+                TicketNumber = ticket.TicketNumber,
+                Message = "This ticket is not valid for entry.",
+            };
+
+        ticket.Status = TicketStatus.Used;
+        await db.SaveChangesAsync(token);
+        return new TicketValidationResponseDto
+        {
+            IsValid = true,
+            TicketNumber = ticket.TicketNumber,
+            Message = "Ticket validated. Entry is allowed.",
+        };
+    }
 
     private static async Task<T?> GetFromGatewayAsync<T>(
         HttpClient gateway,
@@ -297,11 +343,29 @@ public sealed class TicketPurchaseService(
             ScreeningId = purchase.ScreeningId,
             PaymentId = purchase.PaymentId,
             PaymentMethod = purchase.PaymentMethod,
+            Status = purchase.Status,
             SeatLabel = purchase.SeatLabel,
             TicketNumber = purchase.TicketNumber,
             PricePaid = purchase.PricePaid,
             PurchasedAtUtc = DateTime.SpecifyKind(purchase.PurchasedAtUtc, DateTimeKind.Utc),
         };
+
+    private static async Task<bool> ConfirmReservationAsync(
+        HttpClient gateway,
+        string authorizationHeader,
+        Guid reservationId,
+        CancellationToken token
+    )
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"api/reservations/{reservationId}/confirm"
+        );
+        request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorizationHeader);
+
+        using var response = await gateway.SendAsync(request, token);
+        return response.IsSuccessStatusCode;
+    }
 
     private static async Task<PaymentTransactionResponseDto> AuthorizePaymentAsync(
         HttpClient gateway,

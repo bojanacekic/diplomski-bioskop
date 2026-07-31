@@ -31,6 +31,7 @@ partial class TicketsDbContextModelSnapshot : ModelSnapshot
             b.Property<Guid>("ReservationId").HasColumnType("uniqueidentifier");
             b.Property<Guid>("ScreeningId").HasColumnType("uniqueidentifier");
             b.Property<string>("SeatLabel").IsRequired().HasMaxLength(10).HasColumnType("nvarchar(10)");
+            b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("nvarchar(20)");
             b.Property<string>("TicketNumber").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
             b.Property<Guid>("UserId").HasColumnType("uniqueidentifier");
             b.HasKey("Id");
