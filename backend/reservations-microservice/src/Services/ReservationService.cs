@@ -14,6 +14,7 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         CancellationToken token
     )
     {
+        await ExpireDueReservationsAsync(token);
         var reservations = await db.Reservations
             .AsNoTracking()
             .Where(reservation => reservation.UserId == userId)
@@ -28,6 +29,7 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         CancellationToken token
     )
     {
+        await ExpireDueReservationsAsync(token);
         var query = db.Reservations.AsNoTracking();
         if (screeningId.HasValue)
             query = query.Where(reservation => reservation.ScreeningId == screeningId.Value);
@@ -43,13 +45,18 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         Guid screeningId,
         Guid? userId,
         CancellationToken token
-    ) =>
-        await db.Reservations
+    )
+    {
+        await ExpireDueReservationsAsync(token);
+        return await db.Reservations
             .AsNoTracking()
             .Where(
                 reservation =>
                     reservation.ScreeningId == screeningId
-                    && reservation.Status == ReservationStatus.Active
+                    && (
+                        reservation.Status == ReservationStatus.Active
+                        || reservation.Status == ReservationStatus.Confirmed
+                    )
             )
             .OrderBy(reservation => reservation.SeatLabel)
             .Select(reservation => new ReservedSeatResponseDto
@@ -58,6 +65,7 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
                 IsMine = userId.HasValue && reservation.UserId == userId.Value,
             })
             .ToListAsync(token);
+    }
 
     public async Task<IReadOnlyList<ReservationResponseDto>> CreateAsync(
         Guid userId,
@@ -65,6 +73,7 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         CancellationToken token
     )
     {
+        await ExpireDueReservationsAsync(token);
         var seatLabels = request
             .SeatLabels.Select(seat => seat.Trim().ToUpperInvariant())
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -74,7 +83,10 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
             reservation =>
                 reservation.ScreeningId == request.ScreeningId
                 && seatLabels.Contains(reservation.SeatLabel)
-                && reservation.Status == ReservationStatus.Active,
+                && (
+                    reservation.Status == ReservationStatus.Active
+                    || reservation.Status == ReservationStatus.Confirmed
+                ),
             token
         );
         if (reservedSeatExists)
@@ -145,6 +157,66 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         return Map(reservation);
     }
 
+    public async Task<bool> ConfirmAsync(
+        Guid id,
+        Guid userId,
+        bool canManageReservations,
+        CancellationToken token
+    )
+    {
+        await ExpireDueReservationsAsync(token);
+        var reservation = await db.Reservations.SingleOrDefaultAsync(
+            item =>
+                item.Id == id
+                && item.Status == ReservationStatus.Active
+                && (canManageReservations || item.UserId == userId),
+            token
+        );
+        if (reservation is null)
+            return false;
+
+        reservation.Status = ReservationStatus.Confirmed;
+        await db.SaveChangesAsync(token);
+        return true;
+    }
+
+    public async Task ExpireDueReservationsAsync(CancellationToken token)
+    {
+        var activeReservations = await db.Reservations
+            .Where(reservation => reservation.Status == ReservationStatus.Active)
+            .ToListAsync(token);
+        if (activeReservations.Count == 0)
+            return;
+
+        var gateway = httpClientFactory.CreateClient("Gateway");
+        var now = DateTime.UtcNow;
+        var screenings = new Dictionary<Guid, ScreeningDetailsDto?>();
+        foreach (var screeningId in activeReservations.Select(item => item.ScreeningId).Distinct())
+        {
+            screenings[screeningId] = await GetFromGatewayAsync<ScreeningDetailsDto>(
+                gateway,
+                $"api/screenings/{screeningId}",
+                token
+            );
+        }
+
+        var reservationsToExpire = activeReservations.Where(reservation =>
+        {
+            var screening = screenings[reservation.ScreeningId];
+            return screening is not null
+                && DateTime.SpecifyKind(screening.StartsAtUtc, DateTimeKind.Utc).AddMinutes(-30) <= now;
+        });
+
+        foreach (var reservation in reservationsToExpire)
+        {
+            reservation.Status = ReservationStatus.Expired;
+            reservation.ExpiredAtUtc = now;
+        }
+
+        if (db.ChangeTracker.HasChanges())
+            await db.SaveChangesAsync(token);
+    }
+
     private async Task EnsureReservationHasNoPurchasedTicketAsync(
         Guid reservationId,
         string authorizationHeader,
@@ -199,9 +271,12 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
                 throw new InvalidOperationException("The selected screening does not exist.");
             if (screening.Status is 2 or 3)
                 throw new InvalidOperationException("Reservations are not available for this screening.");
-            if (DateTime.SpecifyKind(screening.StartsAtUtc, DateTimeKind.Utc) <= DateTime.UtcNow)
+            if (
+                DateTime.SpecifyKind(screening.StartsAtUtc, DateTimeKind.Utc)
+                <= DateTime.UtcNow.AddMinutes(30)
+            )
                 throw new InvalidOperationException(
-                    "Reservations are no longer available because this screening has already started."
+                    "Reservations are no longer available within 30 minutes of the screening start time."
                 );
 
             var hall = await GetFromGatewayAsync<HallDetailsDto>(
@@ -257,6 +332,9 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
             ReservedAtUtc = DateTime.SpecifyKind(reservation.ReservedAtUtc, DateTimeKind.Utc),
             CancelledAtUtc = reservation.CancelledAtUtc.HasValue
                 ? DateTime.SpecifyKind(reservation.CancelledAtUtc.Value, DateTimeKind.Utc)
+                : null,
+            ExpiredAtUtc = reservation.ExpiredAtUtc.HasValue
+                ? DateTime.SpecifyKind(reservation.ExpiredAtUtc.Value, DateTimeKind.Utc)
                 : null,
         };
 }

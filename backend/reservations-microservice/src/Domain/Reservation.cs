@@ -10,4 +10,5 @@ public sealed class Reservation
     public ReservationPaymentOption PaymentOption { get; set; } = ReservationPaymentOption.NotSelected;
     public DateTime ReservedAtUtc { get; set; }
     public DateTime? CancelledAtUtc { get; set; }
+    public DateTime? ExpiredAtUtc { get; set; }
 }

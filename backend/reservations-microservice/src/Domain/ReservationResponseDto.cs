@@ -10,4 +10,5 @@ public sealed class ReservationResponseDto
     public ReservationPaymentOption PaymentOption { get; init; }
     public DateTime ReservedAtUtc { get; init; }
     public DateTime? CancelledAtUtc { get; init; }
+    public DateTime? ExpiredAtUtc { get; init; }
 }

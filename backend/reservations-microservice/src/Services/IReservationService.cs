@@ -14,6 +14,13 @@ public interface IReservationService
         string authorizationHeader,
         CancellationToken token
     );
+    Task<bool> ConfirmAsync(
+        Guid id,
+        Guid userId,
+        bool canManageReservations,
+        CancellationToken token
+    );
+    Task ExpireDueReservationsAsync(CancellationToken token);
     Task<bool> CancelAsync(
         Guid id,
         Guid userId,

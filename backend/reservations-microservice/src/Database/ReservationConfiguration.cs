@@ -15,7 +15,7 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
         builder.HasIndex(reservation => new { reservation.UserId, reservation.ReservedAtUtc });
         builder
             .HasIndex(reservation => new { reservation.ScreeningId, reservation.SeatLabel })
-            .HasFilter("[Status] = 'Active'")
+            .HasFilter("[Status] IN ('Active', 'Confirmed')")
             .IsUnique();
     }
 }

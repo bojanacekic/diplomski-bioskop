@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Reservations.Database;
 using Reservations.Domain;
 using Reservations.Services;
+using Reservations.WebAPI;
 using Reservations.WebAPI.Validators;
 
 DotEnvReader.Load(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
@@ -36,6 +37,7 @@ var gatewayBaseUrl =
 builder.WebHost.UseUrls(reservationsUrl);
 builder.Services.AddDbContext<ReservationsDbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddHostedService<ReservationExpirationHostedService>();
 builder.Services.AddHttpClient("Gateway", client =>
     client.BaseAddress = new Uri($"{gatewayBaseUrl.TrimEnd('/')}/"));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
@@ -80,6 +82,9 @@ Guid? TryCurrentUserId(ClaimsPrincipal user)
     var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub);
     return Guid.TryParse(userId, out var id) ? id : null;
 }
+
+bool CanManageReservations(ClaimsPrincipal user) =>
+    user.IsInRole("CinemaManager") || user.IsInRole("Administrator");
 
 app.MapGet("/api/reservations/me", async (ClaimsPrincipal user, IReservationService service, CancellationToken token) =>
     Results.Ok(await service.GetForUserAsync(CurrentUserId(user), token))).RequireAuthorization();
@@ -160,6 +165,25 @@ app.MapPut(
                 return Results.Conflict(new { message = exception.Message });
             }
         }
+    )
+    .RequireAuthorization();
+
+app.MapPut(
+        "/api/reservations/{id:guid}/confirm",
+        async (
+            Guid id,
+            ClaimsPrincipal user,
+            IReservationService service,
+            CancellationToken token
+        ) =>
+            await service.ConfirmAsync(
+                id,
+                CurrentUserId(user),
+                CanManageReservations(user),
+                token
+            )
+                ? Results.NoContent()
+                : Results.Conflict(new { message = "The reservation cannot be confirmed." })
     )
     .RequireAuthorization();
 

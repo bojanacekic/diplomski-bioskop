@@ -25,6 +25,7 @@ partial class ReservationsDbContextModelSnapshot : ModelSnapshot
         {
             b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
             b.Property<DateTime?>("CancelledAtUtc").HasColumnType("datetime2");
+            b.Property<DateTime?>("ExpiredAtUtc").HasColumnType("datetime2");
             b.Property<int>("PaymentOption").HasColumnType("int");
             b.Property<DateTime>("ReservedAtUtc").HasColumnType("datetime2");
             b.Property<Guid>("ScreeningId").HasColumnType("uniqueidentifier");
@@ -32,7 +33,7 @@ partial class ReservationsDbContextModelSnapshot : ModelSnapshot
             b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("nvarchar(20)");
             b.Property<Guid>("UserId").HasColumnType("uniqueidentifier");
             b.HasKey("Id");
-            b.HasIndex("ScreeningId", "SeatLabel").IsUnique().HasFilter("[Status] = 'Active'");
+            b.HasIndex("ScreeningId", "SeatLabel").IsUnique().HasFilter("[Status] IN ('Active', 'Confirmed')");
             b.HasIndex("UserId", "ReservedAtUtc");
             b.ToTable("Reservations", (string)null);
         });
