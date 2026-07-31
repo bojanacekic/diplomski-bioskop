@@ -106,7 +106,33 @@ app.MapPost("/api/reservations", async (CreateReservationRequestDto request, Cla
     }
 }).RequireAuthorization();
 
-app.MapDelete("/api/reservations/{id:guid}", async (Guid id, ClaimsPrincipal user, IReservationService service, CancellationToken token) =>
-    await service.CancelAsync(id, CurrentUserId(user), token) ? Results.NoContent() : Results.NotFound()).RequireAuthorization();
+app.MapDelete(
+        "/api/reservations/{id:guid}",
+        async (
+            Guid id,
+            HttpRequest httpRequest,
+            ClaimsPrincipal user,
+            IReservationService service,
+            CancellationToken token
+        ) =>
+        {
+            try
+            {
+                return await service.CancelAsync(
+                    id,
+                    CurrentUserId(user),
+                    httpRequest.Headers.Authorization.ToString(),
+                    token
+                )
+                    ? Results.NoContent()
+                    : Results.NotFound();
+            }
+            catch (InvalidOperationException exception)
+            {
+                return Results.Conflict(new { message = exception.Message });
+            }
+        }
+    )
+    .RequireAuthorization();
 
 app.Run();

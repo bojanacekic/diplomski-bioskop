@@ -11,6 +11,7 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
         CancellationToken token
     )
     {
+        await MarkPastScreeningsAsCompletedAsync(token);
         var query = db.Screenings.AsNoTracking();
 
         if (date.HasValue)
@@ -43,6 +44,7 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
 
     public async Task<ScreeningResponseDto?> GetByIdAsync(Guid id, CancellationToken token)
     {
+        await MarkPastScreeningsAsCompletedAsync(token);
         var screening = await db.Screenings.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id, token);
         return screening is null ? null : Map(screening);
     }
@@ -60,7 +62,7 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
             StartsAtUtc = request.StartsAtUtc,
             EndsAtUtc = request.EndsAtUtc,
             BaseTicketPrice = request.BaseTicketPrice,
-            Status = request.Status,
+            Status = StatusFor(request.Status, request.EndsAtUtc),
         };
 
         db.Screenings.Add(screening);
@@ -83,7 +85,7 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
         screening.StartsAtUtc = request.StartsAtUtc;
         screening.EndsAtUtc = request.EndsAtUtc;
         screening.BaseTicketPrice = request.BaseTicketPrice;
-        screening.Status = request.Status;
+        screening.Status = StatusFor(request.Status, request.EndsAtUtc);
 
         await db.SaveChangesAsync(token);
         return Map(screening);
@@ -99,6 +101,25 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
         await db.SaveChangesAsync(token);
         return true;
     }
+
+    private Task MarkPastScreeningsAsCompletedAsync(CancellationToken token) =>
+        db.Screenings
+            .Where(
+                screening =>
+                    screening.EndsAtUtc <= DateTime.UtcNow
+                    && screening.Status != ScreeningStatus.Completed
+                    && screening.Status != ScreeningStatus.Cancelled
+            )
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    screening => screening.Status,
+                    ScreeningStatus.Completed
+                ),
+                token
+            );
+
+    private static ScreeningStatus StatusFor(ScreeningStatus requestedStatus, DateTime endsAtUtc) =>
+        endsAtUtc <= DateTime.UtcNow ? ScreeningStatus.Completed : requestedStatus;
 
     private static ScreeningResponseDto Map(Screening screening) =>
         new()

@@ -22,4 +22,10 @@ public interface ITicketPurchaseService
         string authorizationHeader,
         CancellationToken token
     );
+
+    Task<bool> HasTicketForReservationAsync(
+        Guid reservationId,
+        Guid userId,
+        CancellationToken token
+    );
 }

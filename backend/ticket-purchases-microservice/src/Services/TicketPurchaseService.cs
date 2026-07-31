@@ -141,6 +141,16 @@ public sealed class TicketPurchaseService(
         };
     }
 
+    public Task<bool> HasTicketForReservationAsync(
+        Guid reservationId,
+        Guid userId,
+        CancellationToken token
+    ) =>
+        db.TicketPurchases.AnyAsync(
+            ticket => ticket.ReservationId == reservationId && ticket.UserId == userId,
+            token
+        );
+
     private static async Task<T?> GetFromGatewayAsync<T>(
         HttpClient gateway,
         string path,

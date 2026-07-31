@@ -117,6 +117,24 @@ app.MapGet(
     )
     .RequireAuthorization();
 
+app.MapGet(
+        "/api/tickets/reservations/{reservationId:guid}/exists",
+        async (
+            Guid reservationId,
+            ClaimsPrincipal user,
+            ITicketPurchaseService service,
+            CancellationToken token
+        ) =>
+            Results.Ok(
+                await service.HasTicketForReservationAsync(
+                    reservationId,
+                    CurrentUserId(user),
+                    token
+                )
+            )
+    )
+    .RequireAuthorization();
+
 app.MapPost(
         "/api/tickets",
         async (

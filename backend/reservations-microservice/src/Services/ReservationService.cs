@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Reservations.Database;
 using Reservations.Domain;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace Reservations.Services;
@@ -103,7 +104,12 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         return reservations.Select(Map).ToList();
     }
 
-    public async Task<bool> CancelAsync(Guid id, Guid userId, CancellationToken token)
+    public async Task<bool> CancelAsync(
+        Guid id,
+        Guid userId,
+        string authorizationHeader,
+        CancellationToken token
+    )
     {
         var reservation = await db.Reservations.SingleOrDefaultAsync(
             item => item.Id == id && item.UserId == userId && item.Status == ReservationStatus.Active,
@@ -112,10 +118,47 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         if (reservation is null)
             return false;
 
+        await EnsureReservationHasNoPurchasedTicketAsync(id, authorizationHeader, token);
         reservation.Status = ReservationStatus.Cancelled;
         reservation.CancelledAtUtc = DateTime.UtcNow;
         await db.SaveChangesAsync(token);
         return true;
+    }
+
+    private async Task EnsureReservationHasNoPurchasedTicketAsync(
+        Guid reservationId,
+        string authorizationHeader,
+        CancellationToken token
+    )
+    {
+        try
+        {
+            var gateway = httpClientFactory.CreateClient("Gateway");
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"api/tickets/reservations/{reservationId}/exists"
+            );
+            request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorizationHeader);
+
+            using var response = await gateway.SendAsync(request, token);
+            if (!response.IsSuccessStatusCode)
+                throw new InvalidOperationException(
+                    "Ticket information is temporarily unavailable. The reservation cannot be cancelled."
+                );
+
+            var hasPurchasedTicket =
+                await response.Content.ReadFromJsonAsync<bool>(cancellationToken: token);
+            if (hasPurchasedTicket)
+                throw new InvalidOperationException(
+                    "Reservations with purchased tickets cannot be cancelled."
+                );
+        }
+        catch (HttpRequestException)
+        {
+            throw new InvalidOperationException(
+                "Ticket information is temporarily unavailable. The reservation cannot be cancelled."
+            );
+        }
     }
 
     private async Task ValidateScreeningAndSeatsAsync(
