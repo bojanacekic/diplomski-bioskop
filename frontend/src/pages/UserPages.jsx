@@ -359,11 +359,15 @@ function ReservationsPanel({ token }) {
       method: "DELETE",
       headers: headers(token),
     });
+    const payload = await response.json().catch(() => ({}));
     if (response.ok) {
       setMessage({ type: "success", text: "Reservation cancelled." });
       load();
     } else {
-      setMessage({ type: "error", text: "Reservation could not be cancelled." });
+      setMessage({
+        type: "error",
+        text: payload.message ?? "Reservation could not be cancelled.",
+      });
     }
   };
 
