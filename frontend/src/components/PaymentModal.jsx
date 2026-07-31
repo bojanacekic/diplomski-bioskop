@@ -9,12 +9,35 @@ const initialForm = {
 
 export default function PaymentModal({ isOpen, price, onClose, onSubmit, submitting }) {
   const [form, setForm] = useState(initialForm);
+  const [error, setError] = useState("");
+  const [paymentDeclined, setPaymentDeclined] = useState(false);
 
   useEffect(() => {
-    if (isOpen) setForm(initialForm);
+    if (isOpen) {
+      setForm(initialForm);
+      setError("");
+      setPaymentDeclined(false);
+    }
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  if (paymentDeclined) {
+    return (
+      <div className="modal-backdrop" role="dialog" aria-modal="true">
+        <div className="confirmation-dialog payment-declined-dialog">
+          <p className="eyebrow">PAYMENT DECLINED</p>
+          <h2>Your payment was declined</h2>
+          <p>No payment was made and no ticket was issued. Check your card details or try another test card.</p>
+          <div className="form-actions">
+            <button className="submit-button" type="button" onClick={() => setPaymentDeclined(false)}>
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const formatCardNumber = (value) =>
     value
@@ -40,11 +63,33 @@ export default function PaymentModal({ isOpen, price, onClose, onSubmit, submitt
               ? value.replace(/\D/g, "").slice(0, 4)
             : value,
     }));
+    setError("");
   };
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
-    onSubmit(form);
+    const [month, year] = form.expiryDate.split("/").map(Number);
+
+    if (
+      !Number.isInteger(month) ||
+      !Number.isInteger(year) ||
+      month < 1 ||
+      month > 12 ||
+      year < 26 ||
+      (year === 26 && month < 7)
+    ) {
+      setError("Expiry date format is invalid.");
+      return;
+    }
+
+    const result = await onSubmit(form);
+    if (!result?.ok) {
+      if (result?.message?.toLowerCase().includes("declined")) {
+        setPaymentDeclined(true);
+      } else {
+        setError(result?.message ?? "Payment could not be completed.");
+      }
+    }
   };
 
   return (
@@ -74,6 +119,7 @@ export default function PaymentModal({ isOpen, price, onClose, onSubmit, submitt
             <input name="cvv" inputMode="numeric" autoComplete="cc-csc" type="password" value={form.cvv} onChange={update} maxLength="4" required />
           </label>
         </div>
+        {error && <p className="form-message payment-error">{error}</p>}
         <p className="payment-note">Use any valid test card. A card ending in 0000 simulates a declined payment.</p>
         <div className="form-actions">
           <button className="secondary-button" type="button" onClick={onClose} disabled={submitting}>Cancel</button>

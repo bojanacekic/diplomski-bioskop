@@ -19,7 +19,16 @@ public static partial class AuthorizePaymentValidator
         if (!CardNumberPattern().IsMatch(cardNumber))
             errors["cardNumber"] = ["Enter a valid test card number."];
         if (!ExpiryDatePattern().IsMatch(request.ExpiryDate))
+        {
             errors["expiryDate"] = ["Use the MM/YY expiry date format."];
+        }
+        else
+        {
+            var month = int.Parse(request.ExpiryDate[..2]);
+            var year = int.Parse(request.ExpiryDate[3..]);
+            if (year < 26 || (year == 26 && month < 7))
+                errors["expiryDate"] = ["Expiry date format is invalid."];
+        }
         if (!CvvPattern().IsMatch(request.Cvv))
             errors["cvv"] = ["CVV must contain 3 or 4 digits."];
 
