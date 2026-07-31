@@ -572,6 +572,27 @@ form input:focus {
   color: var(--muted);
   font-size: 1.8rem;
 }
+.payment-modal {
+  width: min(100%, 520px);
+}
+.payment-modal h2 {
+  margin: 0.3rem 0 0.55rem;
+}
+.payment-modal label {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+  font-weight: 600;
+}
+.payment-modal input {
+  padding: 0.7rem;
+}
+.payment-note {
+  margin: 0.9rem 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
 .confirmation-dialog {
   width: min(100% - 2rem, 420px);
   border-radius: 0.8rem;

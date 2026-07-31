@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ConfirmationDialog from "../components/ConfirmationDialog";
+import PaymentModal from "../components/PaymentModal";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 const headers = (token) => ({
@@ -331,6 +332,8 @@ function ReservationsPanel({ token }) {
   const [tickets, setTickets] = useState([]);
   const [message, setMessage] = useState(null);
   const [confirmReservationId, setConfirmReservationId] = useState(null);
+  const [paymentReservation, setPaymentReservation] = useState(null);
+  const [purchasing, setPurchasing] = useState(false);
 
   const load = async () => {
     const [reservationsResponse, screeningsResponse, moviesResponse, hallsResponse, ticketsResponse] =
@@ -371,17 +374,25 @@ function ReservationsPanel({ token }) {
     }
   };
 
-  const purchase = async (reservationId) => {
+  const purchase = async (paymentForm) => {
+    if (!paymentReservation) return;
+
     setMessage(null);
+    setPurchasing(true);
     const response = await fetch(`${api}/api/tickets`, {
       method: "POST",
       headers: headers(token),
-      body: JSON.stringify({ reservationId }),
+      body: JSON.stringify({
+        reservationId: paymentReservation.id,
+        ...paymentForm,
+      }),
     });
     const payload = await response.json().catch(() => ({}));
+    setPurchasing(false);
 
     if (response.ok) {
       setMessage({ type: "success", text: "Ticket purchased successfully." });
+      setPaymentReservation(null);
       load();
     } else {
       setMessage({
@@ -437,7 +448,7 @@ function ReservationsPanel({ token }) {
                       <>
                         <button
                           className="submit-button"
-                          onClick={() => purchase(reservation.id)}
+                          onClick={() => setPaymentReservation(reservation)}
                         >
                           Buy ticket
                         </button>
@@ -467,6 +478,13 @@ function ReservationsPanel({ token }) {
           cancel(reservationId);
         }}
         onClose={() => setConfirmReservationId(null)}
+      />
+      <PaymentModal
+        isOpen={Boolean(paymentReservation)}
+        price={screeningById(paymentReservation?.screeningId)?.baseTicketPrice ?? 0}
+        onClose={() => !purchasing && setPaymentReservation(null)}
+        onSubmit={purchase}
+        submitting={purchasing}
       />
     </section>
   );
