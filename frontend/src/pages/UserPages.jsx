@@ -375,30 +375,38 @@ function ReservationsPanel({ token }) {
   };
 
   const purchase = async (paymentForm) => {
-    if (!paymentReservation) return;
+    if (!paymentReservation) {
+      return { ok: false, message: "Select a reservation before paying." };
+    }
 
     setMessage(null);
     setPurchasing(true);
-    const response = await fetch(`${api}/api/tickets`, {
-      method: "POST",
-      headers: headers(token),
-      body: JSON.stringify({
-        reservationId: paymentReservation.id,
-        ...paymentForm,
-      }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    setPurchasing(false);
-
-    if (response.ok) {
-      setMessage({ type: "success", text: "Ticket purchased successfully." });
-      setPaymentReservation(null);
-      load();
-    } else {
-      setMessage({
-        type: "error",
-        text: payload.message ?? "Ticket could not be purchased.",
+    try {
+      const response = await fetch(`${api}/api/tickets`, {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify({
+          reservationId: paymentReservation.id,
+          ...paymentForm,
+        }),
       });
+      const payload = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        setMessage({ type: "success", text: "Ticket purchased successfully." });
+        setPaymentReservation(null);
+        load();
+        return { ok: true };
+      }
+
+      return {
+        ok: false,
+        message: payload.message ?? "Payment could not be completed.",
+      };
+    } catch {
+      return { ok: false, message: "Payment service is currently unavailable." };
+    } finally {
+      setPurchasing(false);
     }
   };
 
