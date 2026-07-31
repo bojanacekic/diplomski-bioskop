@@ -9,10 +9,18 @@ public interface ITicketPurchaseService
         CancellationToken token
     );
 
+    Task<IReadOnlyList<TicketPurchaseResponseDto>> GetAllAsync(CancellationToken token);
+
     Task<TicketPurchaseResponseDto> PurchaseAsync(
         Guid userId,
         string authorizationHeader,
         PurchaseTicketRequestDto request,
+        CancellationToken token
+    );
+
+    Task<TicketPurchaseResponseDto> PurchaseAtBoxOfficeAsync(
+        string authorizationHeader,
+        CashTicketPurchaseRequestDto request,
         CancellationToken token
     );
 

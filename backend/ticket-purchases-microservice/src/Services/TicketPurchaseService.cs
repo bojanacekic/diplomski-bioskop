@@ -88,6 +88,7 @@ public sealed class TicketPurchaseService(
             ScreeningId = reservation.ScreeningId,
             SeatLabel = reservation.SeatLabel,
             PaymentId = payment.Id,
+            PaymentMethod = PaymentMethod.OnlineCard,
             TicketNumber = $"SC-{Guid.NewGuid():N}"[..15].ToUpperInvariant(),
             PricePaid = screening.BaseTicketPrice,
             PurchasedAtUtc = DateTime.UtcNow,
@@ -128,6 +129,75 @@ public sealed class TicketPurchaseService(
             throw new InvalidOperationException(
                 "Ticket purchase could not be completed. The payment was voided."
             );
+        }
+
+        return Map(purchase);
+    }
+
+    public async Task<IReadOnlyList<TicketPurchaseResponseDto>> GetAllAsync(CancellationToken token)
+    {
+        var purchases = await db.TicketPurchases
+            .AsNoTracking()
+            .OrderByDescending(ticket => ticket.PurchasedAtUtc)
+            .ToListAsync(token);
+
+        return purchases.Select(Map).ToList();
+    }
+
+    public async Task<TicketPurchaseResponseDto> PurchaseAtBoxOfficeAsync(
+        string authorizationHeader,
+        CashTicketPurchaseRequestDto request,
+        CancellationToken token
+    )
+    {
+        if (await db.TicketPurchases.AnyAsync(ticket => ticket.ReservationId == request.ReservationId, token))
+            throw new InvalidOperationException("A ticket has already been purchased for this reservation.");
+
+        var gateway = httpClientFactory.CreateClient("Gateway");
+        var reservations = await GetFromGatewayAsync<List<ReservationDetailsDto>>(
+            gateway,
+            "api/reservations",
+            authorizationHeader,
+            token
+        );
+        var reservation = reservations?.SingleOrDefault(item => item.Id == request.ReservationId);
+        if (reservation is null || reservation.Status != 1)
+            throw new InvalidOperationException("Only active reservations can be purchased at the box office.");
+
+        var screening = await GetFromGatewayAsync<ScreeningDetailsDto>(
+            gateway,
+            $"api/screenings/{reservation.ScreeningId}",
+            null,
+            token
+        );
+        if (screening is null || screening.Status is 2 or 3)
+            throw new InvalidOperationException("The selected screening is unavailable.");
+        if (DateTime.SpecifyKind(screening.StartsAtUtc, DateTimeKind.Utc) <= DateTime.UtcNow)
+            throw new InvalidOperationException(
+                "Tickets can no longer be purchased because this screening has already started."
+            );
+
+        var purchase = new TicketPurchase
+        {
+            Id = Guid.NewGuid(),
+            UserId = reservation.UserId,
+            ReservationId = reservation.Id,
+            ScreeningId = reservation.ScreeningId,
+            SeatLabel = reservation.SeatLabel,
+            PaymentMethod = PaymentMethod.CashAtBoxOffice,
+            TicketNumber = $"SC-{Guid.NewGuid():N}"[..15].ToUpperInvariant(),
+            PricePaid = screening.BaseTicketPrice,
+            PurchasedAtUtc = DateTime.UtcNow,
+        };
+
+        db.TicketPurchases.Add(purchase);
+        try
+        {
+            await db.SaveChangesAsync(token);
+        }
+        catch (DbUpdateException)
+        {
+            throw new InvalidOperationException("A ticket has already been purchased for this reservation.");
         }
 
         return Map(purchase);
@@ -187,6 +257,7 @@ public sealed class TicketPurchaseService(
                 : reservation?.SeatLabel ?? "Not recorded",
             StartsAtUtc = screening.StartsAtUtc,
             PricePaid = ticket.PricePaid,
+            PaymentMethod = ticket.PaymentMethod,
         };
     }
 
@@ -225,6 +296,7 @@ public sealed class TicketPurchaseService(
             ReservationId = purchase.ReservationId,
             ScreeningId = purchase.ScreeningId,
             PaymentId = purchase.PaymentId,
+            PaymentMethod = purchase.PaymentMethod,
             SeatLabel = purchase.SeatLabel,
             TicketNumber = purchase.TicketNumber,
             PricePaid = purchase.PricePaid,

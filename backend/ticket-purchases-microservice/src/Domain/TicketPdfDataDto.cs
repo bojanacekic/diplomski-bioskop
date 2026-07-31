@@ -8,4 +8,5 @@ public sealed class TicketPdfDataDto
     public string SeatLabel { get; init; } = string.Empty;
     public DateTime StartsAtUtc { get; init; }
     public decimal PricePaid { get; init; }
+    public PaymentMethod PaymentMethod { get; init; }
 }

@@ -82,7 +82,12 @@ builder
             ValidateLifetime = true,
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy(
+        "BoxOfficeSales",
+        policy => policy.RequireRole("CinemaManager", "Administrator")
+    )
+);
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
         policy
@@ -116,6 +121,13 @@ app.MapGet(
             Results.Ok(await service.GetForUserAsync(CurrentUserId(user), token))
     )
     .RequireAuthorization();
+
+app.MapGet(
+        "/api/tickets",
+        async (ITicketPurchaseService service, CancellationToken token) =>
+            Results.Ok(await service.GetAllAsync(token))
+    )
+    .RequireAuthorization("BoxOfficeSales");
 
 app.MapGet(
         "/api/tickets/reservations/{reservationId:guid}/exists",
@@ -173,6 +185,43 @@ app.MapPost(
         }
     )
     .RequireAuthorization();
+
+app.MapPost(
+        "/api/tickets/box-office",
+        async (
+            CashTicketPurchaseRequestDto request,
+            HttpRequest httpRequest,
+            ITicketPurchaseService service,
+            CancellationToken token
+        ) =>
+        {
+            var errors = CashTicketPurchaseValidator.Validate(request);
+            if (errors.Count > 0)
+                return Results.ValidationProblem(errors);
+
+            try
+            {
+                var ticket = await service.PurchaseAtBoxOfficeAsync(
+                    httpRequest.Headers.Authorization.ToString(),
+                    request,
+                    token
+                );
+                return Results.Created($"/api/tickets/{ticket.Id}", ticket);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return Results.Conflict(new { message = exception.Message });
+            }
+            catch (HttpRequestException)
+            {
+                return Results.Problem(
+                    "Reservation information is temporarily unavailable.",
+                    statusCode: StatusCodes.Status503ServiceUnavailable
+                );
+            }
+        }
+    )
+    .RequireAuthorization("BoxOfficeSales");
 
 app.MapGet(
         "/api/tickets/{id:guid}/pdf",

@@ -21,7 +21,7 @@ public sealed class TicketPdfService
             $"Screening: {screeningTime}",
             $"Seat: {ticket.SeatLabel}",
             $"Price: {ticket.PricePaid:0.00} RSD",
-            "Purchase: Online card payment",
+            $"Purchase: {(ticket.PaymentMethod == PaymentMethod.CashAtBoxOffice ? "Cinema box office - cash" : "Online card payment")}",
             "",
             "Please present this ticket at the cinema entrance.",
         };

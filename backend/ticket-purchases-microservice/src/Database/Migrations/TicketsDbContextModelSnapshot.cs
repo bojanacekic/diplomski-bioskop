@@ -25,6 +25,7 @@ partial class TicketsDbContextModelSnapshot : ModelSnapshot
         {
             b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
             b.Property<Guid?>("PaymentId").HasColumnType("uniqueidentifier");
+            b.Property<int>("PaymentMethod").HasColumnType("int");
             b.Property<DateTime>("PurchasedAtUtc").HasColumnType("datetime2");
             b.Property<decimal>("PricePaid").HasPrecision(10, 2).HasColumnType("decimal(10,2)");
             b.Property<Guid>("ReservationId").HasColumnType("uniqueidentifier");
