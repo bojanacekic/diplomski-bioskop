@@ -59,6 +59,27 @@ public sealed class TicketPurchaseService(
                 "Tickets can no longer be purchased because this screening has already started."
             );
 
+        var payment = await AuthorizePaymentAsync(
+            gateway,
+            authorizationHeader,
+            new PaymentAuthorizationRequestDto
+            {
+                ReservationId = reservation.Id,
+                Amount = screening.BaseTicketPrice,
+                CardholderName = request.CardholderName,
+                CardNumber = request.CardNumber,
+                ExpiryDate = request.ExpiryDate,
+                Cvv = request.Cvv,
+            },
+            token
+        );
+        if (payment.Status == 4)
+            throw new InvalidOperationException(
+                payment.FailureReason ?? "The payment was declined."
+            );
+        if (payment.Status != 1)
+            throw new InvalidOperationException("The payment could not be authorized.");
+
         var purchase = new TicketPurchase
         {
             Id = Guid.NewGuid(),
@@ -66,6 +87,7 @@ public sealed class TicketPurchaseService(
             ReservationId = reservation.Id,
             ScreeningId = reservation.ScreeningId,
             SeatLabel = reservation.SeatLabel,
+            PaymentId = payment.Id,
             TicketNumber = $"SC-{Guid.NewGuid():N}"[..15].ToUpperInvariant(),
             PricePaid = screening.BaseTicketPrice,
             PurchasedAtUtc = DateTime.UtcNow,
@@ -78,7 +100,34 @@ public sealed class TicketPurchaseService(
         }
         catch (DbUpdateException)
         {
-            throw new InvalidOperationException("A ticket has already been purchased for this reservation.");
+            await VoidPaymentAsync(gateway, authorizationHeader, payment.Id, token);
+            throw new InvalidOperationException(
+                "A ticket has already been purchased for this reservation. The payment was voided."
+            );
+        }
+
+        try
+        {
+            var capturedPayment = await UpdatePaymentAsync(
+                gateway,
+                authorizationHeader,
+                payment.Id,
+                "capture",
+                token
+            );
+            if (capturedPayment.Status != 2)
+                throw new InvalidOperationException("The payment could not be completed.");
+        }
+        catch (Exception exception) when (
+            exception is HttpRequestException or InvalidOperationException
+        )
+        {
+            db.TicketPurchases.Remove(purchase);
+            await db.SaveChangesAsync(token);
+            await VoidPaymentAsync(gateway, authorizationHeader, payment.Id, token);
+            throw new InvalidOperationException(
+                "Ticket purchase could not be completed. The payment was voided."
+            );
         }
 
         return Map(purchase);
@@ -175,9 +224,76 @@ public sealed class TicketPurchaseService(
             Id = purchase.Id,
             ReservationId = purchase.ReservationId,
             ScreeningId = purchase.ScreeningId,
+            PaymentId = purchase.PaymentId,
             SeatLabel = purchase.SeatLabel,
             TicketNumber = purchase.TicketNumber,
             PricePaid = purchase.PricePaid,
             PurchasedAtUtc = DateTime.SpecifyKind(purchase.PurchasedAtUtc, DateTimeKind.Utc),
         };
+
+    private static async Task<PaymentTransactionResponseDto> AuthorizePaymentAsync(
+        HttpClient gateway,
+        string authorizationHeader,
+        PaymentAuthorizationRequestDto payment,
+        CancellationToken token
+    )
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "api/payments/authorize")
+        {
+            Content = JsonContent.Create(payment),
+        };
+        request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorizationHeader);
+
+        using var response = await gateway.SendAsync(request, token);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException("The payment service is temporarily unavailable.");
+
+        return
+            await response.Content.ReadFromJsonAsync<PaymentTransactionResponseDto>(
+                cancellationToken: token
+            ) ?? throw new InvalidOperationException("The payment service returned an invalid response.");
+    }
+
+    private static async Task<PaymentTransactionResponseDto> UpdatePaymentAsync(
+        HttpClient gateway,
+        string authorizationHeader,
+        Guid paymentId,
+        string action,
+        CancellationToken token
+    )
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"api/payments/{paymentId}/{action}"
+        );
+        request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorizationHeader);
+
+        using var response = await gateway.SendAsync(request, token);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException("The payment service is temporarily unavailable.");
+
+        return
+            await response.Content.ReadFromJsonAsync<PaymentTransactionResponseDto>(
+                cancellationToken: token
+            ) ?? throw new InvalidOperationException("The payment service returned an invalid response.");
+    }
+
+    private static async Task VoidPaymentAsync(
+        HttpClient gateway,
+        string authorizationHeader,
+        Guid paymentId,
+        CancellationToken token
+    )
+    {
+        try
+        {
+            await UpdatePaymentAsync(gateway, authorizationHeader, paymentId, "void", token);
+        }
+        catch (Exception exception) when (
+            exception is HttpRequestException or InvalidOperationException
+        )
+        {
+            // The failed compensation remains visible as an authorized payment for later handling.
+        }
+    }
 }

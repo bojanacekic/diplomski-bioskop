@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using TicketPurchases.Database;
 
 #nullable disable
@@ -10,9 +11,10 @@ using TicketPurchases.Database;
 namespace TicketPurchases.Database.Migrations;
 
 [DbContext(typeof(TicketsDbContext))]
-partial class TicketsDbContextModelSnapshot : ModelSnapshot
+[Migration("20260731093000_AddPaymentId")]
+partial class AddPaymentId
 {
-    protected override void BuildModel(ModelBuilder modelBuilder)
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618
         modelBuilder
