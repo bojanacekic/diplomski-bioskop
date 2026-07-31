@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ConfirmationDialog from "../components/ConfirmationDialog";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 
@@ -18,20 +19,24 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
   const [halls, setHalls] = useState([]);
   const [screenings, setScreenings] = useState([]);
   const [customers, setCustomers] = useState({});
+  const [tickets, setTickets] = useState([]);
   const [search, setSearch] = useState("");
   const [state, setState] = useState("loading");
+  const [message, setMessage] = useState(null);
+  const [cashReservation, setCashReservation] = useState(null);
 
   useEffect(() => {
     const load = async () => {
       setState("loading");
 
       try {
-        const [reservationsResponse, moviesResponse, hallsResponse, screeningsResponse] =
+        const [reservationsResponse, moviesResponse, hallsResponse, screeningsResponse, ticketsResponse] =
           await Promise.all([
             fetch(`${api}/api/reservations`, { headers: headers(accessToken) }),
             fetch(`${api}/api/movies`),
             fetch(`${api}/api/halls`),
             fetch(`${api}/api/screenings`),
+            fetch(`${api}/api/tickets`, { headers: headers(accessToken) }),
           ]);
 
         if (!reservationsResponse.ok) throw new Error();
@@ -41,6 +46,7 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
         setMovies(moviesResponse.ok ? await moviesResponse.json() : []);
         setHalls(hallsResponse.ok ? await hallsResponse.json() : []);
         setScreenings(screeningsResponse.ok ? await screeningsResponse.json() : []);
+        setTickets(ticketsResponse.ok ? await ticketsResponse.json() : []);
 
         const customerIds = [...new Set(loadedReservations.map((item) => item.userId))];
         const customerEntries = await Promise.all(
@@ -61,6 +67,25 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
 
     load();
   }, [accessToken]);
+
+  const sellForCash = async () => {
+    if (!cashReservation) return;
+
+    const response = await fetch(`${api}/api/tickets/box-office`, {
+      method: "POST",
+      headers: { ...headers(accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ reservationId: cashReservation.id }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    setCashReservation(null);
+
+    if (response.ok) {
+      setTickets((current) => [...current, payload]);
+      setMessage({ type: "success", text: "Cash payment recorded and ticket issued." });
+    } else {
+      setMessage({ type: "error", text: payload.message ?? "Cash ticket could not be issued." });
+    }
+  };
 
   const reservationDetails = (reservation) => {
     const screening = screenings.find((item) => item.id === reservation.screeningId);
@@ -108,6 +133,7 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
       </label>
 
       {state === "loading" && <p className="state-message">Loading reservations...</p>}
+      {message && <p className={`form-message ${message.type}`}>{message.text}</p>}
       {state === "error" && (
         <p className="state-message error">
           Reservations are currently unavailable. Make sure the Reservations service and Gateway are running.
@@ -117,7 +143,8 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
         <div className="management-list reservation-management-list">
           {visibleReservations.map((reservation) => {
             const { screening, movie, hall, customer } = reservationDetails(reservation);
-            const isCancelled = reservation.status === 1 || reservation.status === "Cancelled";
+            const isCancelled = reservation.status === 2 || reservation.status === "Cancelled";
+            const ticket = tickets.find((item) => item.reservationId === reservation.id);
 
             return (
               <article className="manage-card reservation-management-card" key={reservation.id}>
@@ -144,6 +171,15 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
                     {customer && <small>@{customer.username}</small>}
                   </div>
                 </dl>
+                {isCancelled ? null : ticket ? (
+                  <span className="ticket-purchased">Ticket issued</span>
+                ) : reservation.paymentOption === 1 ? (
+                  <button className="submit-button" onClick={() => setCashReservation(reservation)}>
+                    Sell for cash
+                  </button>
+                ) : (
+                  <span className="ticket-passed">Awaiting payment choice</span>
+                )}
               </article>
             );
           })}
@@ -152,6 +188,14 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
           )}
         </div>
       )}
+      <ConfirmationDialog
+        isOpen={Boolean(cashReservation)}
+        title="Confirm cash payment?"
+        message="This will issue a ticket for the selected reservation and record a cash payment at the cinema box office."
+        confirmLabel="Issue ticket"
+        onConfirm={sellForCash}
+        onClose={() => setCashReservation(null)}
+      />
     </section>
   );
 }

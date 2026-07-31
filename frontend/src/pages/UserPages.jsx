@@ -374,6 +374,29 @@ function ReservationsPanel({ token }) {
     }
   };
 
+  const requestCashPayment = async (reservationId) => {
+    const response = await fetch(`${api}/api/reservations/${reservationId}/cash-payment`, {
+      method: "PUT",
+      headers: headers(token),
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+      setReservations((current) =>
+        current.map((reservation) => (reservation.id === payload.id ? payload : reservation)),
+      );
+      setMessage({
+        type: "success",
+        text: "Your reservation is marked for cash payment at the cinema box office.",
+      });
+    } else {
+      setMessage({
+        type: "error",
+        text: payload.message ?? "Cash payment could not be selected.",
+      });
+    }
+  };
+
   const purchase = async (paymentForm) => {
     if (!paymentReservation) {
       return { ok: false, message: "Select a reservation before paying." };
@@ -452,13 +475,29 @@ function ReservationsPanel({ token }) {
                       <span className="ticket-passed">Screening passed</span>
                     ) : ticket ? (
                       <span className="ticket-purchased">Ticket purchased</span>
+                    ) : reservation.paymentOption === 1 ? (
+                      <>
+                        <span className="ticket-purchased">Cash payment requested</span>
+                        <button
+                          className="secondary-button"
+                          onClick={() => setConfirmReservationId(reservation.id)}
+                        >
+                          Cancel
+                        </button>
+                      </>
                     ) : (
                       <>
                         <button
                           className="submit-button"
                           onClick={() => setPaymentReservation(reservation)}
                         >
-                          Buy ticket
+                          Pay online
+                        </button>
+                        <button
+                          className="secondary-button"
+                          onClick={() => requestCashPayment(reservation.id)}
+                        >
+                          Buy ticket for cash
                         </button>
                         <button
                           className="secondary-button"

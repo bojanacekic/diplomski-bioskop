@@ -890,18 +890,20 @@ form input:focus {
   max-width: 100%;
 }
 .reservation-management-card {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.7fr) 90px minmax(155px, 1fr) 165px;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 .reservation-facts {
-  display: flex;
-  gap: 2rem;
+  display: contents;
   margin: 0;
-  min-width: 260px;
 }
 .reservation-facts div {
   display: grid;
-  gap: 0.15rem;
+  align-content: start;
+  gap: 0.3rem;
+  min-width: 0;
 }
 .reservation-facts dt {
   color: var(--muted);
@@ -913,6 +915,17 @@ form input:focus {
 }
 .reservation-facts small {
   color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.reservation-management-card > .submit-button,
+.reservation-management-card > .ticket-purchased,
+.reservation-management-card > .ticket-passed {
+  align-self: center;
+  justify-self: stretch;
+  text-align: center;
+}
+.reservation-management-card > .submit-button {
+  margin: 0;
 }
 
 @media (max-width: 1050px) {
