@@ -7,6 +7,7 @@ public sealed class ReservationResponseDto
     public Guid ScreeningId { get; init; }
     public string SeatLabel { get; init; } = string.Empty;
     public ReservationStatus Status { get; init; }
+    public ReservationPaymentOption PaymentOption { get; init; }
     public DateTime ReservedAtUtc { get; init; }
     public DateTime? CancelledAtUtc { get; init; }
 }

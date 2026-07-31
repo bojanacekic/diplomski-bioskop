@@ -125,6 +125,26 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         return true;
     }
 
+    public async Task<ReservationResponseDto?> RequestCashPaymentAsync(
+        Guid id,
+        Guid userId,
+        string authorizationHeader,
+        CancellationToken token
+    )
+    {
+        var reservation = await db.Reservations.SingleOrDefaultAsync(
+            item => item.Id == id && item.UserId == userId && item.Status == ReservationStatus.Active,
+            token
+        );
+        if (reservation is null)
+            return null;
+
+        await EnsureReservationHasNoPurchasedTicketAsync(id, authorizationHeader, token);
+        reservation.PaymentOption = ReservationPaymentOption.CashAtBoxOffice;
+        await db.SaveChangesAsync(token);
+        return Map(reservation);
+    }
+
     private async Task EnsureReservationHasNoPurchasedTicketAsync(
         Guid reservationId,
         string authorizationHeader,
@@ -233,6 +253,7 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
             ScreeningId = reservation.ScreeningId,
             SeatLabel = reservation.SeatLabel,
             Status = reservation.Status,
+            PaymentOption = reservation.PaymentOption,
             ReservedAtUtc = DateTime.SpecifyKind(reservation.ReservedAtUtc, DateTimeKind.Utc),
             CancelledAtUtc = reservation.CancelledAtUtc.HasValue
                 ? DateTime.SpecifyKind(reservation.CancelledAtUtc.Value, DateTimeKind.Utc)

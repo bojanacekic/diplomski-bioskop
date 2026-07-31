@@ -135,4 +135,32 @@ app.MapDelete(
     )
     .RequireAuthorization();
 
+app.MapPut(
+        "/api/reservations/{id:guid}/cash-payment",
+        async (
+            Guid id,
+            HttpRequest httpRequest,
+            ClaimsPrincipal user,
+            IReservationService service,
+            CancellationToken token
+        ) =>
+        {
+            try
+            {
+                var reservation = await service.RequestCashPaymentAsync(
+                    id,
+                    CurrentUserId(user),
+                    httpRequest.Headers.Authorization.ToString(),
+                    token
+                );
+                return reservation is null ? Results.NotFound() : Results.Ok(reservation);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return Results.Conflict(new { message = exception.Message });
+            }
+        }
+    )
+    .RequireAuthorization();
+
 app.Run();

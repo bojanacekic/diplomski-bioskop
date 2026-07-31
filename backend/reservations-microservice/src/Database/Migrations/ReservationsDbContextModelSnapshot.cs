@@ -25,6 +25,7 @@ partial class ReservationsDbContextModelSnapshot : ModelSnapshot
         {
             b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
             b.Property<DateTime?>("CancelledAtUtc").HasColumnType("datetime2");
+            b.Property<int>("PaymentOption").HasColumnType("int");
             b.Property<DateTime>("ReservedAtUtc").HasColumnType("datetime2");
             b.Property<Guid>("ScreeningId").HasColumnType("uniqueidentifier");
             b.Property<string>("SeatLabel").IsRequired().HasMaxLength(10).HasColumnType("nvarchar(10)");
