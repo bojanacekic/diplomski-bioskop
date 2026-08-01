@@ -10,6 +10,7 @@ public sealed class Movie
     public DateOnly PremiereDate { get; set; }
     public string AgeRating { get; set; } = string.Empty;
     public string? PosterBase64 { get; set; }
+    public string? VerticalPosterBase64 { get; set; }
     public decimal AverageRating { get; set; }
     public MovieStatus Status { get; set; }
 }

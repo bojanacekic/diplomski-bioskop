@@ -9,4 +9,5 @@ public sealed class UpdateMovieRequestDto
     public DateOnly PremiereDate { get; init; }
     public string AgeRating { get; init; } = string.Empty;
     public string? PosterBase64 { get; init; }
+    public string? VerticalPosterBase64 { get; init; }
 }

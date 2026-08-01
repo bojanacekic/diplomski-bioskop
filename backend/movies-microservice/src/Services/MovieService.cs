@@ -51,6 +51,7 @@ public sealed class MovieService(MoviesDbContext db) : IMovieService
             PremiereDate = request.PremiereDate,
             AgeRating = request.AgeRating.Trim(),
             PosterBase64 = request.PosterBase64,
+            VerticalPosterBase64 = request.VerticalPosterBase64,
             Status = request.Status,
             AverageRating = 0,
         };
@@ -77,6 +78,7 @@ public sealed class MovieService(MoviesDbContext db) : IMovieService
         movie.PremiereDate = request.PremiereDate;
         movie.AgeRating = request.AgeRating.Trim();
         movie.PosterBase64 = request.PosterBase64;
+        movie.VerticalPosterBase64 = request.VerticalPosterBase64;
 
         await db.SaveChangesAsync(token);
         return Map(movie);
@@ -125,6 +127,7 @@ public sealed class MovieService(MoviesDbContext db) : IMovieService
             PremiereDate = movie.PremiereDate,
             AgeRating = movie.AgeRating,
             PosterBase64 = movie.PosterBase64,
+            VerticalPosterBase64 = movie.VerticalPosterBase64,
             AverageRating = movie.AverageRating,
             Status = movie.Status,
         };
@@ -140,6 +143,7 @@ public sealed class MovieService(MoviesDbContext db) : IMovieService
             PremiereDate = movie.PremiereDate,
             AgeRating = movie.AgeRating,
             PosterBase64 = movie.PosterBase64,
+            VerticalPosterBase64 = movie.VerticalPosterBase64,
             AverageRating = movie.AverageRating,
             Status = movie.Status,
         };
