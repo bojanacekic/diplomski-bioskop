@@ -619,7 +619,14 @@ function TicketsPanel({ token }) {
     link.href = URL.createObjectURL(file);
     link.download = `smart-cinema-${type}-${ticket.ticketNumber}.pdf`;
     link.click();
-    URL.revokeObjectURL(link.href);
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  };
+
+  const downloadTickets = async (group) => {
+    setMessage(null);
+    for (const ticket of group) {
+      await downloadDocument(ticket, "pdf");
+    }
   };
 
   const cancelTicket = async (ticketId) => {
@@ -691,9 +698,9 @@ function TicketsPanel({ token }) {
                   <strong>{group.reduce((total, item) => total + item.pricePaid, 0)} RSD</strong>
                   <button
                     className="secondary-button"
-                    onClick={() => downloadDocument(ticket, "pdf")}
+                    onClick={() => downloadTickets(group)}
                   >
-                    {group.length > 1 ? "Download tickets PDF" : "Download PDF"}
+                    {group.length > 1 ? `Download ${group.length} PDF tickets` : "Download PDF"}
                   </button>
                   <button
                     className="secondary-button"

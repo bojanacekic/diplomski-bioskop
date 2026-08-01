@@ -43,6 +43,7 @@ function App() {
   const [movies, setMovies] = useState(() => cachedMovies ?? []);
   const [moviesRefreshKey, setMoviesRefreshKey] = useState(0);
   const [featuredMovie, setFeaturedMovie] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
   const [moviesState, setMoviesState] = useState(() =>
     cachedMovies ? "ready" : "loading",
   );
@@ -63,6 +64,12 @@ function App() {
     session?.role === 2 || session?.role === "CinemaManager";
   const isAdministrator =
     session?.role === 3 || session?.role === "Administrator";
+  const recommendedMovies = recommendations
+    .map((recommendation) => ({
+      ...movies.find((movie) => movie.id === recommendation.movieId),
+      recommendationReason: recommendation.reason,
+    }))
+    .filter((movie) => movie.id);
 
   const chooseFeaturedMovie = (availableMovies = movies) => {
     if (availableMovies.length > 0) {
@@ -110,6 +117,24 @@ function App() {
       controller.abort();
     };
   }, [search, moviesRefreshKey]);
+
+  useEffect(() => {
+    if (!session?.accessToken || page !== "home") {
+      setRecommendations([]);
+      return;
+    }
+    const controller = new AbortController();
+    fetch(`${apiUrl}/api/recommendations/me`, {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : []))
+      .then(setRecommendations)
+      .catch((error) => {
+        if (error.name !== "AbortError") setRecommendations([]);
+      });
+    return () => controller.abort();
+  }, [session?.accessToken, moviesRefreshKey, page]);
 
   useEffect(() => {
     if (!accountMenuOpen)
@@ -407,7 +432,7 @@ function App() {
               </article>
             ))}
           </div>
-          {session && movies.length > 0 && (
+          {session && recommendedMovies.length > 0 && (
             <section className="recommendations-section">
               <div className="section-heading">
                 <div>
@@ -417,10 +442,10 @@ function App() {
                 </div>
               </div>
               <div className="movie-grid recommendations-grid">
-                {movies.slice(0, 3).map((movie) => (
+                {recommendedMovies.map((movie) => (
                   <article className="movie-card clickable-card" key={`recommended-${movie.id}`} onClick={() => { setSelectedMovie(movie); setPage("movie-details"); }}>
                     <img src={posterUrlFor(movie)} alt={`${movie.title} poster`} loading="lazy" />
-                    <div className="movie-info"><p>{movie.genre} · {movie.durationMinutes} min</p><h2>{movie.title}</h2><span>{movie.ageRating}</span></div>
+                    <div className="movie-info"><p>{movie.genre} · {movie.durationMinutes} min</p><h2>{movie.title}</h2><span>{movie.recommendationReason}</span></div>
                   </article>
                 ))}
               </div>

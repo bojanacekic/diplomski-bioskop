@@ -49,6 +49,7 @@ export default function MovieDetailsPage({
   onBack,
   onSignIn,
 }) {
+  const [fullMovie, setFullMovie] = useState(movie);
   const [screenings, setScreenings] = useState([]);
   const [halls, setHalls] = useState([]);
   const [selectedScreeningId, setSelectedScreeningId] = useState("");
@@ -57,6 +58,21 @@ export default function MovieDetailsPage({
   const [message, setMessage] = useState(null);
   const [rating, setRating] = useState(null);
   const [ratingState, setRatingState] = useState("hidden");
+
+  useEffect(() => {
+    if (!movie?.id) return;
+    const controller = new AbortController();
+    setFullMovie(movie);
+
+    fetch(`${api}/api/movies/${movie.id}`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then(setFullMovie)
+      .catch((error) => {
+        if (error?.name !== "AbortError") setFullMovie(movie);
+      });
+
+    return () => controller.abort();
+  }, [movie?.id]);
 
   useEffect(() => {
     if (!token || !movie) return setRatingState("hidden");
@@ -175,7 +191,11 @@ export default function MovieDetailsPage({
   };
 
   if (!movie) return null;
-  const verticalPoster = verticalPosterFor(movie.title) ?? posterUrlFor(movie, true);
+  const verticalPoster =
+    fullMovie?.verticalPosterBase64 ??
+    verticalPosterFor(movie.title) ??
+    fullMovie?.posterBase64 ??
+    posterUrlFor(movie, true);
   const posterPosition = posterPositionFor(movie.title);
 
   return (
