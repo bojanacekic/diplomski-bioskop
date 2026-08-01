@@ -8,7 +8,7 @@ const headers = (accessToken) => ({
 });
 
 const formatDateTime = (value) =>
-  new Intl.DateTimeFormat("sr-RS", {
+  new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));

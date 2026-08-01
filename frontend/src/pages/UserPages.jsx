@@ -482,7 +482,7 @@ function ReservationsPanel({ token }) {
                   <h3>{screening ? name(movies, screening.movieId, "title") : "Screening unavailable"}</h3>
                   <p>
                     {screening
-                      ? new Intl.DateTimeFormat("sr-RS", {
+                      ? new Intl.DateTimeFormat("en-GB", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         }).format(new Date(screening.startsAtUtc))
@@ -676,7 +676,7 @@ function TicketsPanel({ token }) {
                   <h3>{screening ? name(movies, screening.movieId, "title") : "Screening unavailable"}</h3>
                   <p>
                     {screening
-                      ? new Intl.DateTimeFormat("sr-RS", {
+                      ? new Intl.DateTimeFormat("en-GB", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         }).format(new Date(screening.startsAtUtc))
@@ -817,7 +817,7 @@ export function UserManagementPage({ token, onBack }) {
                 @{user.username} · {user.email}
               </p>
               <p>
-                Role: {["", "Registered user", "Cinema manager", "Administrator"][user.role]} · Joined: {new Intl.DateTimeFormat("sr-RS", { dateStyle: "medium" }).format(new Date(user.createdAtUtc))}
+                Role: {["", "Registered user", "Cinema manager", "Administrator"][user.role]} · Joined: {new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(user.createdAtUtc))}
               </p>
             </div>
             <div className="manage-actions">
