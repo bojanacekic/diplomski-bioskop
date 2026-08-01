@@ -152,13 +152,13 @@ app.MapPut(
         {
             try
             {
-                var reservation = await service.RequestCashPaymentAsync(
+                var reservations = await service.RequestCashPaymentAsync(
                     id,
                     CurrentUserId(user),
                     httpRequest.Headers.Authorization.ToString(),
                     token
                 );
-                return reservation is null ? Results.NotFound() : Results.Ok(reservation);
+                return reservations.Count == 0 ? Results.NotFound() : Results.Ok(reservations);
             }
             catch (InvalidOperationException exception)
             {

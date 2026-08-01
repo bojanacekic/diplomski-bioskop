@@ -382,8 +382,12 @@ function ReservationsPanel({ token }) {
     const payload = await response.json().catch(() => ({}));
 
     if (response.ok) {
+      const updatedReservations = Array.isArray(payload) ? payload : [payload];
       setReservations((current) =>
-        current.map((reservation) => (reservation.id === payload.id ? payload : reservation)),
+        current.map(
+          (reservation) =>
+            updatedReservations.find((item) => item.id === reservation.id) ?? reservation,
+        ),
       );
       setMessage({
         type: "success",
@@ -416,7 +420,7 @@ function ReservationsPanel({ token }) {
       const payload = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Ticket purchased successfully." });
+        setMessage({ type: "success", text: "Tickets for all selected seats were purchased successfully." });
         setPaymentReservation(null);
         load();
         return { ok: true };
@@ -434,6 +438,17 @@ function ReservationsPanel({ token }) {
   };
 
   const screeningById = (id) => screenings.find((screening) => screening.id === id);
+  const groupSize = (reservation) =>
+    reservation?.reservationGroupId
+      ? reservations.filter((item) => item.reservationGroupId === reservation.reservationGroupId).length
+      : 1;
+  const reservationGroups = Object.values(
+    reservations.reduce((groups, reservation) => {
+      const key = reservation.reservationGroupId ?? reservation.id;
+      (groups[key] ??= []).push(reservation);
+      return groups;
+    }, {}),
+  );
   const name = (items, id, field) =>
     items.find((item) => item.id === id)?.[field] ?? "Unavailable";
 
@@ -446,10 +461,11 @@ function ReservationsPanel({ token }) {
         <p className="profile-help">You do not have any reservations yet.</p>
       ) : (
         <div className="profile-reservations-list">
-          {reservations.map((reservation) => {
+          {reservationGroups.map((group) => {
+            const reservation = group[0];
             const screening = screeningById(reservation.screeningId);
-            const ticket = tickets.find(
-              (item) => item.reservationId === reservation.id,
+            const ticket = tickets.find((candidate) =>
+              group.some((item) => item.id === candidate.reservationId),
             );
             const screeningHasPassed =
               !screening || new Date(screening.startsAtUtc) <= new Date();
@@ -460,7 +476,7 @@ function ReservationsPanel({ token }) {
               4: "EXPIRED",
             }[reservation.status] ?? "UNKNOWN";
             return (
-              <article className="profile-reservation-card" key={reservation.id}>
+              <article className="profile-reservation-card" key={reservation.reservationGroupId ?? reservation.id}>
                 <div>
                   <p className="eyebrow">{reservationStatus}</p>
                   <h3>{screening ? name(movies, screening.movieId, "title") : "Screening unavailable"}</h3>
@@ -473,7 +489,7 @@ function ReservationsPanel({ token }) {
                       : ""}
                     {screening && ` · ${name(halls, screening.hallId, "name")}`}
                   </p>
-                  <p>Seat: {reservation.seatLabel}</p>
+                  <p>{group.length > 1 ? "Seats" : "Seat"}: {group.map((item) => item.seatLabel).join(", ")}</p>
                   {reservation.status === 4 && (
                     <p className="reservation-expired-message">
                       This reservation expired because it was not paid in time.
@@ -502,13 +518,13 @@ function ReservationsPanel({ token }) {
                           className="submit-button"
                           onClick={() => setPaymentReservation(reservation)}
                         >
-                          Pay online
+                          {groupSize(reservation) > 1 ? `Pay online for ${groupSize(reservation)} seats` : "Pay online"}
                         </button>
                         <button
                           className="secondary-button"
                           onClick={() => requestCashPayment(reservation.id)}
                         >
-                          Buy ticket for cash
+                          {groupSize(reservation) > 1 ? `Buy ${groupSize(reservation)} tickets for cash` : "Buy ticket for cash"}
                         </button>
                         <button
                           className="secondary-button"
@@ -539,7 +555,7 @@ function ReservationsPanel({ token }) {
       />
       <PaymentModal
         isOpen={Boolean(paymentReservation)}
-        price={screeningById(paymentReservation?.screeningId)?.baseTicketPrice ?? 0}
+        price={(screeningById(paymentReservation?.screeningId)?.baseTicketPrice ?? 0) * groupSize(paymentReservation)}
         onClose={() => !purchasing && setPaymentReservation(null)}
         onSubmit={purchase}
         submitting={purchasing}
@@ -583,6 +599,13 @@ function TicketsPanel({ token }) {
     reservations.find((reservation) => reservation.id === id);
   const name = (items, id, field) =>
     items.find((item) => item.id === id)?.[field] ?? "Unavailable";
+  const ticketGroups = Object.values(
+    tickets.reduce((groups, ticket) => {
+      const key = ticket.purchaseId ?? ticket.id;
+      (groups[key] ??= []).push(ticket);
+      return groups;
+    }, {}),
+  );
   const downloadDocument = async (ticket, type) => {
     setMessage(null);
     const response = await fetch(`${api}/api/tickets/${ticket.id}/${type}`, {
@@ -610,15 +633,16 @@ function TicketsPanel({ token }) {
     const payload = await response.json().catch(() => ({}));
 
     if (response.ok) {
+      const updatedTickets = Array.isArray(payload) ? payload : [payload];
       setTickets((current) =>
-        current.map((ticket) => (ticket.id === payload.id ? payload : ticket)),
+        current.map((ticket) => updatedTickets.find((item) => item.id === ticket.id) ?? ticket),
       );
       setMessage({
         type: "success",
         text:
-          payload.paymentMethod === 1
-            ? "Ticket cancelled and online payment refunded."
-            : "Ticket cancelled. Cash refunds are processed at the cinema box office.",
+          updatedTickets[0]?.paymentMethod === 1
+            ? "Tickets cancelled and online payment refunded."
+            : "Tickets cancelled. Cash refunds are processed at the cinema box office.",
       });
     } else {
       setMessage({ type: "error", text: payload.message ?? "Ticket could not be cancelled." });
@@ -634,14 +658,17 @@ function TicketsPanel({ token }) {
         <p className="profile-help">You have not purchased any tickets yet.</p>
       ) : (
         <div className="profile-reservations-list">
-          {tickets.map((ticket) => {
+          {ticketGroups.map((group) => {
+            const ticket = group[0];
             const screening = screeningById(ticket.screeningId);
             const reservation = reservationById(ticket.reservationId);
-            const seatLabel = ticket.seatLabel || reservation?.seatLabel || "Not recorded";
+            const seatLabel = group
+              .map((item) => item.seatLabel || reservationById(item.reservationId)?.seatLabel || "Not recorded")
+              .join(", ");
             const canCancel =
               ticket.status === 1 && screening && new Date(screening.startsAtUtc) > new Date();
             return (
-              <article className="profile-reservation-card" key={ticket.id}>
+              <article className="profile-reservation-card" key={ticket.purchaseId ?? ticket.id}>
                 <div>
                   <p className="eyebrow">
                     {ticket.status === 2 ? "USED TICKET" : ticket.status === 3 ? "CANCELLED TICKET" : "TICKET"}
@@ -656,16 +683,20 @@ function TicketsPanel({ token }) {
                       : ""}
                     {screening && " · " + name(halls, screening.hallId, "name")}
                   </p>
-                  <p>Seat: {seatLabel}</p>
-                  <p className="ticket-number">Ticket no. {ticket.ticketNumber}</p>
+                  <p>{group.length > 1 ? "Seats" : "Seat"}: {seatLabel}</p>
+                  <p className="ticket-number">
+                    {group.length > 1
+                      ? `${group.length} tickets purchased together`
+                      : `Ticket no. ${ticket.ticketNumber}`}
+                  </p>
                 </div>
                 <div className="ticket-actions">
-                  <strong>{ticket.pricePaid} RSD</strong>
+                  <strong>{group.reduce((total, item) => total + item.pricePaid, 0)} RSD</strong>
                   <button
                     className="secondary-button"
                     onClick={() => downloadDocument(ticket, "pdf")}
                   >
-                    Download PDF
+                    {group.length > 1 ? "Download tickets PDF" : "Download PDF"}
                   </button>
                   <button
                     className="secondary-button"
@@ -675,7 +706,7 @@ function TicketsPanel({ token }) {
                   </button>
                   {canCancel && (
                     <button className="danger-button" onClick={() => setConfirmTicketId(ticket.id)}>
-                      Cancel ticket
+                      {group.length > 1 ? "Cancel purchase" : "Cancel ticket"}
                     </button>
                   )}
                 </div>

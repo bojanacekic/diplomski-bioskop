@@ -15,7 +15,8 @@ public sealed class TicketPurchaseConfiguration : IEntityTypeConfiguration<Ticke
         builder.Property(ticket => ticket.PricePaid).HasPrecision(10, 2);
         builder.Property(ticket => ticket.Status).HasConversion<string>().HasMaxLength(20);
         builder.HasIndex(ticket => ticket.ReservationId).IsUnique();
-        builder.HasIndex(ticket => ticket.PaymentId).IsUnique().HasFilter("[PaymentId] IS NOT NULL");
+        builder.HasIndex(ticket => ticket.PaymentId).HasFilter("[PaymentId] IS NOT NULL");
+        builder.HasIndex(ticket => ticket.PurchaseId);
         builder.HasIndex(ticket => new { ticket.UserId, ticket.PurchasedAtUtc });
         builder.HasIndex(ticket => ticket.TicketNumber).IsUnique();
     }

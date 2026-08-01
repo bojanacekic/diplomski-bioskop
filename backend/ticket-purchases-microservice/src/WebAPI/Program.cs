@@ -169,7 +169,7 @@ app.MapPost(
                     request,
                     token
                 );
-                return Results.Created($"/api/tickets/{ticket.Id}", ticket);
+                return Results.Created($"/api/tickets/{ticket[0].Id}", ticket);
             }
             catch (InvalidOperationException exception)
             {
@@ -206,7 +206,7 @@ app.MapPost(
                     request,
                     token
                 );
-                return Results.Created($"/api/tickets/{ticket.Id}", ticket);
+                return Results.Created($"/api/tickets/{ticket[0].Id}", ticket);
             }
             catch (InvalidOperationException exception)
             {
@@ -279,17 +279,21 @@ app.MapGet(
             CancellationToken token
         ) =>
         {
-            var ticket = await service.GetPdfDataAsync(
+            var tickets = await service.GetReceiptDataAsync(
                 id,
                 CurrentUserId(user),
                 httpRequest.Headers.Authorization.ToString(),
                 token
             );
-            if (ticket is null)
+            if (tickets.Count == 0)
                 return Results.NotFound();
 
-            var fileName = $"smart-cinema-ticket-{ticket.TicketNumber}.pdf";
-            return Results.File(ticketPdfService.Create(ticket), "application/pdf", fileName);
+            var fileName = $"smart-cinema-tickets-{tickets[0].TicketNumber}.pdf";
+            return Results.File(
+                ticketPdfService.CreatePurchaseTickets(tickets),
+                "application/pdf",
+                fileName
+            );
         }
     )
     .RequireAuthorization();
@@ -305,17 +309,17 @@ app.MapGet(
             CancellationToken token
         ) =>
         {
-            var ticket = await service.GetPdfDataAsync(
+            var tickets = await service.GetReceiptDataAsync(
                 id,
                 CurrentUserId(user),
                 httpRequest.Headers.Authorization.ToString(),
                 token
             );
-            if (ticket is null)
+            if (tickets.Count == 0)
                 return Results.NotFound();
 
-            var fileName = $"smart-cinema-receipt-{ticket.TicketNumber}.pdf";
-            return Results.File(ticketPdfService.CreateReceipt(ticket), "application/pdf", fileName);
+            var fileName = $"smart-cinema-receipt-{tickets[0].TicketNumber}.pdf";
+            return Results.File(ticketPdfService.CreateReceipt(tickets), "application/pdf", fileName);
         }
     )
     .RequireAuthorization();

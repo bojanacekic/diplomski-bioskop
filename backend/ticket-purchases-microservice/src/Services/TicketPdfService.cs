@@ -50,25 +50,55 @@ public sealed class TicketPdfService
         return CreateDocument(content.ToString());
     }
 
-    public byte[] CreateReceipt(TicketPdfDataDto ticket)
+    public byte[] CreatePurchaseTickets(IReadOnlyList<TicketPdfDataDto> tickets)
     {
+        var ticket = tickets[0];
+        var screeningTime = DateTime.SpecifyKind(ticket.StartsAtUtc, DateTimeKind.Utc)
+            .ToLocalTime()
+            .ToString("dd.MM.yyyy. HH:mm");
+        var lines = new List<string>
+        {
+            "SMART CINEMA",
+            tickets.Count == 1 ? "YOUR CINEMA TICKET" : $"YOUR CINEMA TICKETS ({tickets.Count})",
+            $"Movie: {ticket.MovieTitle}",
+            $"Hall: {ticket.HallName}",
+            $"Screening: {screeningTime}",
+            "",
+            "Seats and ticket numbers:",
+        };
+        lines.AddRange(tickets.Select(item => $"Seat {item.SeatLabel} - ticket {item.TicketNumber}"));
+        lines.AddRange(new[]
+        {
+            "",
+            "Present the relevant ticket number at the cinema entrance.",
+        });
+
+        return CreateDocument(CreateTextContent(lines));
+    }
+
+    public byte[] CreateReceipt(IReadOnlyList<TicketPdfDataDto> tickets)
+    {
+        var ticket = tickets[0];
         var purchasedAt = DateTime.SpecifyKind(ticket.PurchasedAtUtc, DateTimeKind.Utc)
             .ToLocalTime()
             .ToString("dd.MM.yyyy. HH:mm");
-        var lines = new[]
+        var lines = new List<string>
         {
             "SMART CINEMA",
             "FISCAL RECEIPT",
             $"Receipt number: RC-{ticket.TicketNumber}",
-            $"Ticket number: {ticket.TicketNumber}",
             "",
             $"Movie: {ticket.MovieTitle}",
             $"Hall: {ticket.HallName}",
-            $"Seat: {ticket.SeatLabel}",
             $"Payment: {(ticket.PaymentMethod == PaymentMethod.CashAtBoxOffice ? "Cash at box office" : "Online card payment")}",
-            $"Total paid: {ticket.PricePaid:0.00} RSD",
-            $"Purchased: {purchasedAt}",
+            "Tickets:",
         };
+        lines.AddRange(tickets.Select(item => $"{item.TicketNumber} - seat {item.SeatLabel} - {item.PricePaid:0.00} RSD"));
+        lines.AddRange(new[]
+        {
+            $"Total paid: {tickets.Sum(item => item.PricePaid):0.00} RSD",
+            $"Purchased: {purchasedAt}",
+        });
 
         return CreateDocument(CreateTextContent(lines));
     }

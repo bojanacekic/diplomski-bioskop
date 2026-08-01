@@ -25,16 +25,13 @@ public sealed class TicketPurchaseService(
         return purchases.Select(Map).ToList();
     }
 
-    public async Task<TicketPurchaseResponseDto> PurchaseAsync(
+    public async Task<IReadOnlyList<TicketPurchaseResponseDto>> PurchaseAsync(
         Guid userId,
         string authorizationHeader,
         PurchaseTicketRequestDto request,
         CancellationToken token
     )
     {
-        if (await db.TicketPurchases.AnyAsync(ticket => ticket.ReservationId == request.ReservationId, token))
-            throw new InvalidOperationException("A ticket has already been purchased for this reservation.");
-
         var gateway = httpClientFactory.CreateClient("Gateway");
         var reservations = await GetFromGatewayAsync<List<ReservationDetailsDto>>(
             gateway,
@@ -45,6 +42,11 @@ public sealed class TicketPurchaseService(
         var reservation = reservations?.SingleOrDefault(item => item.Id == request.ReservationId);
         if (reservation is null || reservation.Status != 1)
             throw new InvalidOperationException("Only your active reservations can be purchased.");
+        var reservationGroup = GetReservationGroup(reservations, reservation);
+        if (reservationGroup.Any(item => item.Status != 1))
+            throw new InvalidOperationException("All seats in this reservation must be purchased together.");
+        if (await db.TicketPurchases.AnyAsync(ticket => reservationGroup.Select(item => item.Id).Contains(ticket.ReservationId) && ticket.Status != TicketStatus.Cancelled, token))
+            throw new InvalidOperationException("A ticket has already been purchased for this reservation.");
 
         var screening = await GetFromGatewayAsync<ScreeningDetailsDto>(
             gateway,
@@ -65,7 +67,7 @@ public sealed class TicketPurchaseService(
             new PaymentAuthorizationRequestDto
             {
                 ReservationId = reservation.Id,
-                Amount = screening.BaseTicketPrice,
+                Amount = screening.BaseTicketPrice * reservationGroup.Count,
                 CardholderName = request.CardholderName,
                 CardNumber = request.CardNumber,
                 ExpiryDate = request.ExpiryDate,
@@ -80,21 +82,8 @@ public sealed class TicketPurchaseService(
         if (payment.Status != 1)
             throw new InvalidOperationException("The payment could not be authorized.");
 
-        var purchase = new TicketPurchase
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            ReservationId = reservation.Id,
-            ScreeningId = reservation.ScreeningId,
-            SeatLabel = reservation.SeatLabel,
-            PaymentId = payment.Id,
-            PaymentMethod = PaymentMethod.OnlineCard,
-            TicketNumber = $"SC-{Guid.NewGuid():N}"[..15].ToUpperInvariant(),
-            PricePaid = screening.BaseTicketPrice,
-            PurchasedAtUtc = DateTime.UtcNow,
-        };
-
-        db.TicketPurchases.Add(purchase);
+        var purchases = CreatePurchases(reservationGroup, PaymentMethod.OnlineCard, payment.Id, screening.BaseTicketPrice);
+        db.TicketPurchases.AddRange(purchases);
         try
         {
             await db.SaveChangesAsync(token);
@@ -123,7 +112,7 @@ public sealed class TicketPurchaseService(
             exception is HttpRequestException or InvalidOperationException
         )
         {
-            db.TicketPurchases.Remove(purchase);
+            db.TicketPurchases.RemoveRange(purchases);
             await db.SaveChangesAsync(token);
             await VoidPaymentAsync(gateway, authorizationHeader, payment.Id, token);
             throw new InvalidOperationException(
@@ -131,10 +120,10 @@ public sealed class TicketPurchaseService(
             );
         }
 
-        if (!await ConfirmReservationAsync(gateway, authorizationHeader, reservation.Id, token))
+        if (!await ConfirmReservationsAsync(gateway, authorizationHeader, reservationGroup.Select(item => item.Id), token))
             throw new InvalidOperationException("The ticket was issued, but its reservation could not be confirmed.");
 
-        return Map(purchase);
+        return purchases.Select(Map).ToList();
     }
 
     public async Task<IReadOnlyList<TicketPurchaseResponseDto>> GetAllAsync(CancellationToken token)
@@ -147,15 +136,12 @@ public sealed class TicketPurchaseService(
         return purchases.Select(Map).ToList();
     }
 
-    public async Task<TicketPurchaseResponseDto> PurchaseAtBoxOfficeAsync(
+    public async Task<IReadOnlyList<TicketPurchaseResponseDto>> PurchaseAtBoxOfficeAsync(
         string authorizationHeader,
         CashTicketPurchaseRequestDto request,
         CancellationToken token
     )
     {
-        if (await db.TicketPurchases.AnyAsync(ticket => ticket.ReservationId == request.ReservationId, token))
-            throw new InvalidOperationException("A ticket has already been purchased for this reservation.");
-
         var gateway = httpClientFactory.CreateClient("Gateway");
         var reservations = await GetFromGatewayAsync<List<ReservationDetailsDto>>(
             gateway,
@@ -166,6 +152,11 @@ public sealed class TicketPurchaseService(
         var reservation = reservations?.SingleOrDefault(item => item.Id == request.ReservationId);
         if (reservation is null || reservation.Status != 1)
             throw new InvalidOperationException("Only active reservations can be purchased at the box office.");
+        var reservationGroup = GetReservationGroup(reservations, reservation);
+        if (reservationGroup.Any(item => item.Status != 1))
+            throw new InvalidOperationException("All seats in this reservation must be purchased together.");
+        if (await db.TicketPurchases.AnyAsync(ticket => reservationGroup.Select(item => item.Id).Contains(ticket.ReservationId) && ticket.Status != TicketStatus.Cancelled, token))
+            throw new InvalidOperationException("A ticket has already been purchased for this reservation.");
 
         var screening = await GetFromGatewayAsync<ScreeningDetailsDto>(
             gateway,
@@ -180,20 +171,8 @@ public sealed class TicketPurchaseService(
                 "Tickets can no longer be purchased because this screening has already started."
             );
 
-        var purchase = new TicketPurchase
-        {
-            Id = Guid.NewGuid(),
-            UserId = reservation.UserId,
-            ReservationId = reservation.Id,
-            ScreeningId = reservation.ScreeningId,
-            SeatLabel = reservation.SeatLabel,
-            PaymentMethod = PaymentMethod.CashAtBoxOffice,
-            TicketNumber = $"SC-{Guid.NewGuid():N}"[..15].ToUpperInvariant(),
-            PricePaid = screening.BaseTicketPrice,
-            PurchasedAtUtc = DateTime.UtcNow,
-        };
-
-        db.TicketPurchases.Add(purchase);
+        var purchases = CreatePurchases(reservationGroup, PaymentMethod.CashAtBoxOffice, null, screening.BaseTicketPrice);
+        db.TicketPurchases.AddRange(purchases);
         try
         {
             await db.SaveChangesAsync(token);
@@ -203,10 +182,10 @@ public sealed class TicketPurchaseService(
             throw new InvalidOperationException("A ticket has already been purchased for this reservation.");
         }
 
-        if (!await ConfirmReservationAsync(gateway, authorizationHeader, reservation.Id, token))
+        if (!await ConfirmReservationsAsync(gateway, authorizationHeader, reservationGroup.Select(item => item.Id), token))
             throw new InvalidOperationException("The ticket was issued, but its reservation could not be confirmed.");
 
-        return Map(purchase);
+        return purchases.Select(Map).ToList();
     }
 
     public async Task<TicketPdfDataDto?> GetPdfDataAsync(
@@ -281,6 +260,36 @@ public sealed class TicketPurchaseService(
             token
         );
 
+    public async Task<IReadOnlyList<TicketPdfDataDto>> GetReceiptDataAsync(
+        Guid ticketId,
+        Guid userId,
+        string authorizationHeader,
+        CancellationToken token
+    )
+    {
+        var ticket = await db.TicketPurchases.AsNoTracking().SingleOrDefaultAsync(
+            item => item.Id == ticketId && item.UserId == userId,
+            token
+        );
+        if (ticket is null)
+            return [];
+
+        var tickets = ticket.PurchaseId.HasValue
+            ? await db.TicketPurchases.AsNoTracking()
+                .Where(item => item.PurchaseId == ticket.PurchaseId && item.UserId == userId)
+                .OrderBy(item => item.SeatLabel)
+                .ToListAsync(token)
+            : new List<TicketPurchase> { ticket };
+        var result = new List<TicketPdfDataDto>();
+        foreach (var purchase in tickets)
+        {
+            var data = await GetPdfDataAsync(purchase.Id, userId, authorizationHeader, token);
+            if (data is not null)
+                result.Add(data);
+        }
+        return result;
+    }
+
     public async Task<TicketValidationResponseDto> ValidateEntryAsync(
         TicketValidationRequestDto request,
         CancellationToken token
@@ -320,7 +329,7 @@ public sealed class TicketPurchaseService(
         };
     }
 
-    public async Task<TicketPurchaseResponseDto?> CancelAsync(
+    public async Task<IReadOnlyList<TicketPurchaseResponseDto>?> CancelAsync(
         Guid ticketId,
         Guid userId,
         string authorizationHeader,
@@ -333,22 +342,16 @@ public sealed class TicketPurchaseService(
         );
         if (ticket is null)
             return null;
-        if (ticket.Status == TicketStatus.Used)
+        var purchaseTickets = await GetPurchaseTicketsAsync(ticket, token);
+        if (purchaseTickets.Any(item => item.Status == TicketStatus.Used))
             throw new InvalidOperationException("A used ticket cannot be cancelled.");
-        if (ticket.Status == TicketStatus.Cancelled)
+        if (purchaseTickets.All(item => item.Status == TicketStatus.Cancelled))
         {
             var cancelledTicketGateway = httpClientFactory.CreateClient("Gateway");
-            if (
-                !await CancelReservationAsync(
-                    cancelledTicketGateway,
-                    authorizationHeader,
-                    ticket.ReservationId,
-                    token
-                )
-            )
+            if (!await CancelReservationsAsync(cancelledTicketGateway, authorizationHeader, purchaseTickets.Select(item => item.ReservationId), token))
                 throw new InvalidOperationException("This ticket has already been cancelled.");
 
-            return Map(ticket);
+            return purchaseTickets.Select(Map).ToList();
         }
 
         var gateway = httpClientFactory.CreateClient("Gateway");
@@ -379,15 +382,16 @@ public sealed class TicketPurchaseService(
                 throw new InvalidOperationException("The online payment could not be refunded.");
         }
 
-        ticket.Status = TicketStatus.Cancelled;
+        foreach (var purchaseTicket in purchaseTickets)
+            purchaseTicket.Status = TicketStatus.Cancelled;
         await db.SaveChangesAsync(token);
 
-        if (!await CancelReservationAsync(gateway, authorizationHeader, ticket.ReservationId, token))
+        if (!await CancelReservationsAsync(gateway, authorizationHeader, purchaseTickets.Select(item => item.ReservationId), token))
             throw new InvalidOperationException(
                 "The ticket was cancelled, but the reservation could not be released."
             );
 
-        return Map(ticket);
+        return purchaseTickets.Select(Map).ToList();
     }
 
     private static async Task<T?> GetFromGatewayAsync<T>(
@@ -412,6 +416,7 @@ public sealed class TicketPurchaseService(
         new()
         {
             Id = purchase.Id,
+            PurchaseId = purchase.PurchaseId,
             ReservationId = purchase.ReservationId,
             ScreeningId = purchase.ScreeningId,
             PaymentId = purchase.PaymentId,
@@ -440,6 +445,19 @@ public sealed class TicketPurchaseService(
         return response.IsSuccessStatusCode;
     }
 
+    private static async Task<bool> ConfirmReservationsAsync(
+        HttpClient gateway,
+        string authorizationHeader,
+        IEnumerable<Guid> reservationIds,
+        CancellationToken token
+    )
+    {
+        foreach (var reservationId in reservationIds)
+            if (!await ConfirmReservationAsync(gateway, authorizationHeader, reservationId, token))
+                return false;
+        return true;
+    }
+
     private static async Task<bool> CancelReservationAsync(
         HttpClient gateway,
         string authorizationHeader,
@@ -456,6 +474,60 @@ public sealed class TicketPurchaseService(
         using var response = await gateway.SendAsync(request, token);
         return response.IsSuccessStatusCode;
     }
+
+    private static async Task<bool> CancelReservationsAsync(
+        HttpClient gateway,
+        string authorizationHeader,
+        IEnumerable<Guid> reservationIds,
+        CancellationToken token
+    )
+    {
+        var reservationId = reservationIds.FirstOrDefault();
+        return reservationId != Guid.Empty
+            && await CancelReservationAsync(gateway, authorizationHeader, reservationId, token);
+    }
+
+    private static List<ReservationDetailsDto> GetReservationGroup(
+        List<ReservationDetailsDto>? reservations,
+        ReservationDetailsDto reservation
+    ) => reservation.ReservationGroupId.HasValue
+        ? reservations!
+            .Where(item => item.ReservationGroupId == reservation.ReservationGroupId)
+            .ToList()
+        : new List<ReservationDetailsDto> { reservation };
+
+    private static List<TicketPurchase> CreatePurchases(
+        IEnumerable<ReservationDetailsDto> reservations,
+        PaymentMethod paymentMethod,
+        Guid? paymentId,
+        decimal price
+    )
+    {
+        var purchaseId = Guid.NewGuid();
+        var purchasedAt = DateTime.UtcNow;
+        return reservations.Select(reservation => new TicketPurchase
+            {
+                Id = Guid.NewGuid(),
+                PurchaseId = purchaseId,
+                UserId = reservation.UserId,
+                ReservationId = reservation.Id,
+                ScreeningId = reservation.ScreeningId,
+                SeatLabel = reservation.SeatLabel,
+                PaymentId = paymentId,
+                PaymentMethod = paymentMethod,
+                TicketNumber = $"SC-{Guid.NewGuid():N}"[..15].ToUpperInvariant(),
+                PricePaid = price,
+                PurchasedAtUtc = purchasedAt,
+            })
+            .ToList();
+    }
+
+    private Task<List<TicketPurchase>> GetPurchaseTicketsAsync(
+        TicketPurchase ticket,
+        CancellationToken token
+    ) => ticket.PurchaseId.HasValue
+        ? db.TicketPurchases.Where(item => item.PurchaseId == ticket.PurchaseId).ToListAsync(token)
+        : Task.FromResult(new List<TicketPurchase> { ticket });
 
     private static async Task<PaymentTransactionResponseDto> AuthorizePaymentAsync(
         HttpClient gateway,

@@ -93,10 +93,12 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
             throw new InvalidOperationException("One or more selected seats are already reserved.");
 
         var now = DateTime.UtcNow;
+        var reservationGroupId = Guid.NewGuid();
         var reservations = seatLabels
             .Select(seatLabel => new Reservation
             {
                 Id = Guid.NewGuid(),
+                ReservationGroupId = reservationGroupId,
                 UserId = userId,
                 ScreeningId = request.ScreeningId,
                 SeatLabel = seatLabel,
@@ -136,14 +138,28 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         if (reservation is null)
             return false;
 
-        await EnsureReservationHasNoPurchasedTicketAsync(id, authorizationHeader, token);
-        reservation.Status = ReservationStatus.Cancelled;
-        reservation.CancelledAtUtc = DateTime.UtcNow;
+        var groupReservations = reservation.ReservationGroupId.HasValue
+            ? await db.Reservations
+                .Where(item =>
+                    item.UserId == userId
+                    && item.ReservationGroupId == reservation.ReservationGroupId
+                    && (item.Status == ReservationStatus.Active || item.Status == ReservationStatus.Confirmed))
+                .ToListAsync(token)
+            : new List<Reservation> { reservation };
+        foreach (var item in groupReservations)
+            await EnsureReservationHasNoPurchasedTicketAsync(item.Id, authorizationHeader, token);
+
+        var cancelledAtUtc = DateTime.UtcNow;
+        foreach (var item in groupReservations)
+        {
+            item.Status = ReservationStatus.Cancelled;
+            item.CancelledAtUtc = cancelledAtUtc;
+        }
         await db.SaveChangesAsync(token);
         return true;
     }
 
-    public async Task<ReservationResponseDto?> RequestCashPaymentAsync(
+    public async Task<IReadOnlyList<ReservationResponseDto>> RequestCashPaymentAsync(
         Guid id,
         Guid userId,
         string authorizationHeader,
@@ -155,12 +171,14 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
             token
         );
         if (reservation is null)
-            return null;
+            return [];
 
         await EnsureReservationHasNoPurchasedTicketAsync(id, authorizationHeader, token);
-        reservation.PaymentOption = ReservationPaymentOption.CashAtBoxOffice;
+        var groupReservations = await GetReservationGroupAsync(reservation, token);
+        foreach (var item in groupReservations)
+            item.PaymentOption = ReservationPaymentOption.CashAtBoxOffice;
         await db.SaveChangesAsync(token);
-        return Map(reservation);
+        return groupReservations.Select(Map).ToList();
     }
 
     public async Task<bool> ConfirmAsync(
@@ -330,6 +348,7 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         new()
         {
             Id = reservation.Id,
+            ReservationGroupId = reservation.ReservationGroupId,
             UserId = reservation.UserId,
             ScreeningId = reservation.ScreeningId,
             SeatLabel = reservation.SeatLabel,
@@ -343,4 +362,15 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
                 ? DateTime.SpecifyKind(reservation.ExpiredAtUtc.Value, DateTimeKind.Utc)
                 : null,
         };
+
+    private Task<List<Reservation>> GetReservationGroupAsync(
+        Reservation reservation,
+        CancellationToken token
+    ) => reservation.ReservationGroupId.HasValue
+        ? db.Reservations.Where(item =>
+                item.UserId == reservation.UserId
+                && item.ReservationGroupId == reservation.ReservationGroupId
+                && item.Status == ReservationStatus.Active)
+            .ToListAsync(token)
+        : Task.FromResult(new List<Reservation> { reservation });
 }

@@ -3,6 +3,7 @@ namespace Reservations.Domain;
 public sealed class ReservationResponseDto
 {
     public Guid Id { get; init; }
+    public Guid? ReservationGroupId { get; init; }
     public Guid UserId { get; init; }
     public Guid ScreeningId { get; init; }
     public string SeatLabel { get; init; } = string.Empty;

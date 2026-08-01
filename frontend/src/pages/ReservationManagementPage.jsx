@@ -80,8 +80,8 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
     setCashReservation(null);
 
     if (response.ok) {
-      setTickets((current) => [...current, payload]);
-      setMessage({ type: "success", text: "Cash payment recorded and ticket issued." });
+      setTickets((current) => [...current, ...(Array.isArray(payload) ? payload : [payload])]);
+      setMessage({ type: "success", text: "Cash payment recorded and tickets issued." });
     } else {
       setMessage({ type: "error", text: payload.message ?? "Cash ticket could not be issued." });
     }

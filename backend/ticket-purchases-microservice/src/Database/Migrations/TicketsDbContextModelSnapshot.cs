@@ -25,6 +25,7 @@ partial class TicketsDbContextModelSnapshot : ModelSnapshot
         {
             b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
             b.Property<Guid?>("PaymentId").HasColumnType("uniqueidentifier");
+            b.Property<Guid?>("PurchaseId").HasColumnType("uniqueidentifier");
             b.Property<int>("PaymentMethod").HasColumnType("int");
             b.Property<DateTime>("PurchasedAtUtc").HasColumnType("datetime2");
             b.Property<decimal>("PricePaid").HasPrecision(10, 2).HasColumnType("decimal(10,2)");
@@ -35,7 +36,8 @@ partial class TicketsDbContextModelSnapshot : ModelSnapshot
             b.Property<string>("TicketNumber").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
             b.Property<Guid>("UserId").HasColumnType("uniqueidentifier");
             b.HasKey("Id");
-            b.HasIndex("PaymentId").IsUnique().HasFilter("[PaymentId] IS NOT NULL");
+            b.HasIndex("PaymentId").HasFilter("[PaymentId] IS NOT NULL");
+            b.HasIndex("PurchaseId");
             b.HasIndex("ReservationId").IsUnique();
             b.HasIndex("TicketNumber").IsUnique();
             b.HasIndex("UserId", "PurchasedAtUtc");

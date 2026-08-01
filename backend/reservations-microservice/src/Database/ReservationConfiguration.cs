@@ -13,6 +13,7 @@ public sealed class ReservationConfiguration : IEntityTypeConfiguration<Reservat
         builder.Property(reservation => reservation.SeatLabel).HasMaxLength(10).IsRequired();
         builder.Property(reservation => reservation.Status).HasConversion<string>().HasMaxLength(20);
         builder.HasIndex(reservation => new { reservation.UserId, reservation.ReservedAtUtc });
+        builder.HasIndex(reservation => reservation.ReservationGroupId);
         builder
             .HasIndex(reservation => new { reservation.ScreeningId, reservation.SeatLabel })
             .HasFilter("[Status] IN ('Active', 'Confirmed')")

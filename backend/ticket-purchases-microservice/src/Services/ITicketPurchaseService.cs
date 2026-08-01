@@ -11,20 +11,27 @@ public interface ITicketPurchaseService
 
     Task<IReadOnlyList<TicketPurchaseResponseDto>> GetAllAsync(CancellationToken token);
 
-    Task<TicketPurchaseResponseDto> PurchaseAsync(
+    Task<IReadOnlyList<TicketPurchaseResponseDto>> PurchaseAsync(
         Guid userId,
         string authorizationHeader,
         PurchaseTicketRequestDto request,
         CancellationToken token
     );
 
-    Task<TicketPurchaseResponseDto> PurchaseAtBoxOfficeAsync(
+    Task<IReadOnlyList<TicketPurchaseResponseDto>> PurchaseAtBoxOfficeAsync(
         string authorizationHeader,
         CashTicketPurchaseRequestDto request,
         CancellationToken token
     );
 
     Task<TicketPdfDataDto?> GetPdfDataAsync(
+        Guid ticketId,
+        Guid userId,
+        string authorizationHeader,
+        CancellationToken token
+    );
+
+    Task<IReadOnlyList<TicketPdfDataDto>> GetReceiptDataAsync(
         Guid ticketId,
         Guid userId,
         string authorizationHeader,
@@ -42,7 +49,7 @@ public interface ITicketPurchaseService
         CancellationToken token
     );
 
-    Task<TicketPurchaseResponseDto?> CancelAsync(
+    Task<IReadOnlyList<TicketPurchaseResponseDto>?> CancelAsync(
         Guid ticketId,
         Guid userId,
         string authorizationHeader,
