@@ -30,6 +30,7 @@ partial class PaymentsDbContextModelSnapshot : ModelSnapshot
             b.Property<DateTime>("CreatedAtUtc").HasColumnType("datetime2");
             b.Property<string>("FailureReason").HasMaxLength(255).HasColumnType("nvarchar(255)");
             b.Property<Guid>("ReservationId").HasColumnType("uniqueidentifier");
+            b.Property<DateTime?>("RefundedAtUtc").HasColumnType("datetime2");
             b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("nvarchar(20)");
             b.Property<Guid>("UserId").HasColumnType("uniqueidentifier");
             b.Property<DateTime?>("VoidedAtUtc").HasColumnType("datetime2");

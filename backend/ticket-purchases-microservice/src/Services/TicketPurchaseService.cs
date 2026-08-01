@@ -274,7 +274,10 @@ public sealed class TicketPurchaseService(
         CancellationToken token
     ) =>
         db.TicketPurchases.AnyAsync(
-            ticket => ticket.ReservationId == reservationId && ticket.UserId == userId,
+            ticket =>
+                ticket.ReservationId == reservationId
+                && ticket.UserId == userId
+                && ticket.Status != TicketStatus.Cancelled,
             token
         );
 
@@ -315,6 +318,76 @@ public sealed class TicketPurchaseService(
             TicketNumber = ticket.TicketNumber,
             Message = "Ticket validated. Entry is allowed.",
         };
+    }
+
+    public async Task<TicketPurchaseResponseDto?> CancelAsync(
+        Guid ticketId,
+        Guid userId,
+        string authorizationHeader,
+        CancellationToken token
+    )
+    {
+        var ticket = await db.TicketPurchases.SingleOrDefaultAsync(
+            item => item.Id == ticketId && item.UserId == userId,
+            token
+        );
+        if (ticket is null)
+            return null;
+        if (ticket.Status == TicketStatus.Used)
+            throw new InvalidOperationException("A used ticket cannot be cancelled.");
+        if (ticket.Status == TicketStatus.Cancelled)
+        {
+            var cancelledTicketGateway = httpClientFactory.CreateClient("Gateway");
+            if (
+                !await CancelReservationAsync(
+                    cancelledTicketGateway,
+                    authorizationHeader,
+                    ticket.ReservationId,
+                    token
+                )
+            )
+                throw new InvalidOperationException("This ticket has already been cancelled.");
+
+            return Map(ticket);
+        }
+
+        var gateway = httpClientFactory.CreateClient("Gateway");
+        var screening = await GetFromGatewayAsync<ScreeningDetailsDto>(
+            gateway,
+            $"api/screenings/{ticket.ScreeningId}",
+            null,
+            token
+        );
+        if (screening is null)
+            throw new InvalidOperationException("The screening could not be found.");
+        if (DateTime.SpecifyKind(screening.StartsAtUtc, DateTimeKind.Utc) <= DateTime.UtcNow)
+            throw new InvalidOperationException("Tickets can only be cancelled before the screening starts.");
+
+        if (ticket.PaymentMethod == PaymentMethod.OnlineCard)
+        {
+            if (!ticket.PaymentId.HasValue)
+                throw new InvalidOperationException("Online payment information is unavailable.");
+
+            var refund = await UpdatePaymentAsync(
+                gateway,
+                authorizationHeader,
+                ticket.PaymentId.Value,
+                "refund",
+                token
+            );
+            if (refund.Status != 5)
+                throw new InvalidOperationException("The online payment could not be refunded.");
+        }
+
+        ticket.Status = TicketStatus.Cancelled;
+        await db.SaveChangesAsync(token);
+
+        if (!await CancelReservationAsync(gateway, authorizationHeader, ticket.ReservationId, token))
+            throw new InvalidOperationException(
+                "The ticket was cancelled, but the reservation could not be released."
+            );
+
+        return Map(ticket);
     }
 
     private static async Task<T?> GetFromGatewayAsync<T>(
@@ -360,6 +433,23 @@ public sealed class TicketPurchaseService(
         using var request = new HttpRequestMessage(
             HttpMethod.Put,
             $"api/reservations/{reservationId}/confirm"
+        );
+        request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorizationHeader);
+
+        using var response = await gateway.SendAsync(request, token);
+        return response.IsSuccessStatusCode;
+    }
+
+    private static async Task<bool> CancelReservationAsync(
+        HttpClient gateway,
+        string authorizationHeader,
+        Guid reservationId,
+        CancellationToken token
+    )
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"api/reservations/{reservationId}"
         );
         request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorizationHeader);
 

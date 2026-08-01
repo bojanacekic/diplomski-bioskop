@@ -12,4 +12,5 @@ public sealed class Payment
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? CapturedAtUtc { get; set; }
     public DateTime? VoidedAtUtc { get; set; }
+    public DateTime? RefundedAtUtc { get; set; }
 }

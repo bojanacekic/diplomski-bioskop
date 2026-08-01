@@ -240,6 +240,34 @@ app.MapPost(
     )
     .RequireAuthorization("BoxOfficeSales");
 
+app.MapDelete(
+        "/api/tickets/{id:guid}",
+        async (
+            Guid id,
+            HttpRequest httpRequest,
+            ClaimsPrincipal user,
+            ITicketPurchaseService service,
+            CancellationToken token
+        ) =>
+        {
+            try
+            {
+                var ticket = await service.CancelAsync(
+                    id,
+                    CurrentUserId(user),
+                    httpRequest.Headers.Authorization.ToString(),
+                    token
+                );
+                return ticket is null ? Results.NotFound() : Results.Ok(ticket);
+            }
+            catch (InvalidOperationException exception)
+            {
+                return Results.Conflict(new { message = exception.Message });
+            }
+        }
+    )
+    .RequireAuthorization();
+
 app.MapGet(
         "/api/tickets/{id:guid}/pdf",
         async (

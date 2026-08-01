@@ -41,4 +41,11 @@ public interface ITicketPurchaseService
         TicketValidationRequestDto request,
         CancellationToken token
     );
+
+    Task<TicketPurchaseResponseDto?> CancelAsync(
+        Guid ticketId,
+        Guid userId,
+        string authorizationHeader,
+        CancellationToken token
+    );
 }

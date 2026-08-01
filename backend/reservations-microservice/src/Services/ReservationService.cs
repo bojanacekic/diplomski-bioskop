@@ -124,7 +124,13 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
     )
     {
         var reservation = await db.Reservations.SingleOrDefaultAsync(
-            item => item.Id == id && item.UserId == userId && item.Status == ReservationStatus.Active,
+            item =>
+                item.Id == id
+                && item.UserId == userId
+                && (
+                    item.Status == ReservationStatus.Active
+                    || item.Status == ReservationStatus.Confirmed
+                ),
             token
         );
         if (reservation is null)

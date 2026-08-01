@@ -11,4 +11,5 @@ public sealed class PaymentResponseDto
     public DateTime CreatedAtUtc { get; init; }
     public DateTime? CapturedAtUtc { get; init; }
     public DateTime? VoidedAtUtc { get; init; }
+    public DateTime? RefundedAtUtc { get; init; }
 }

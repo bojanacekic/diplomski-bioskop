@@ -144,4 +144,13 @@ app.MapPut(
     )
     .RequireAuthorization();
 
+app.MapPut(
+        "/api/payments/{id:guid}/refund",
+        async (Guid id, ClaimsPrincipal user, IPaymentService service, CancellationToken token) =>
+            (await service.RefundAsync(id, CurrentUserId(user), token)) is { } payment
+                ? Results.Ok(payment)
+                : Results.NotFound()
+    )
+    .RequireAuthorization();
+
 app.Run();

@@ -535,6 +535,20 @@ form input:focus {
   color: var(--muted);
   font-size: 0.85rem;
 }
+.profile-reservation-card .manage-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: 270px;
+  gap: 0.7rem;
+}
+.profile-reservation-card .manage-actions .submit-button {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.profile-reservation-card .manage-actions .ticket-purchased,
+.profile-reservation-card .manage-actions .ticket-passed {
+  align-self: center;
+}
 .profile-form {
   max-width: none;
   padding: 1.35rem;
@@ -1062,6 +1076,14 @@ form input:focus {
   .profile-reservation-card .secondary-button {
     width: 100%;
     margin-top: 0.85rem;
+  }
+  .profile-reservation-card .manage-actions {
+    width: 100%;
+    margin-top: 0.85rem;
+  }
+  .profile-reservation-card .manage-actions .secondary-button {
+    width: auto;
+    margin-top: 0;
   }
   .management-heading,
   .management-layout {

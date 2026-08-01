@@ -88,6 +88,25 @@ public sealed class PaymentService(PaymentsDbContext db) : IPaymentService
         return Map(payment);
     }
 
+    public async Task<PaymentResponseDto?> RefundAsync(Guid id, Guid userId, CancellationToken token)
+    {
+        var payment = await db.Payments.SingleOrDefaultAsync(
+            item => item.Id == id && item.UserId == userId,
+            token
+        );
+        if (payment is null)
+            return null;
+
+        if (payment.Status == PaymentStatus.Captured)
+        {
+            payment.Status = PaymentStatus.Refunded;
+            payment.RefundedAtUtc = DateTime.UtcNow;
+            await db.SaveChangesAsync(token);
+        }
+
+        return Map(payment);
+    }
+
     private static PaymentResponseDto Map(Payment payment) =>
         new()
         {
@@ -103,6 +122,9 @@ public sealed class PaymentService(PaymentsDbContext db) : IPaymentService
                 : null,
             VoidedAtUtc = payment.VoidedAtUtc.HasValue
                 ? DateTime.SpecifyKind(payment.VoidedAtUtc.Value, DateTimeKind.Utc)
+                : null,
+            RefundedAtUtc = payment.RefundedAtUtc.HasValue
+                ? DateTime.SpecifyKind(payment.RefundedAtUtc.Value, DateTimeKind.Utc)
                 : null,
         };
 }

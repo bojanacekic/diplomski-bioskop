@@ -12,4 +12,5 @@ public interface IPaymentService
     );
     Task<PaymentResponseDto?> CaptureAsync(Guid id, Guid userId, CancellationToken token);
     Task<PaymentResponseDto?> VoidAsync(Guid id, Guid userId, CancellationToken token);
+    Task<PaymentResponseDto?> RefundAsync(Guid id, Guid userId, CancellationToken token);
 }

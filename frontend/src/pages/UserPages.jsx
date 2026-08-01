@@ -555,6 +555,7 @@ function TicketsPanel({ token }) {
   const [halls, setHalls] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [message, setMessage] = useState(null);
+  const [confirmTicketId, setConfirmTicketId] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -601,6 +602,29 @@ function TicketsPanel({ token }) {
     URL.revokeObjectURL(link.href);
   };
 
+  const cancelTicket = async (ticketId) => {
+    const response = await fetch(`${api}/api/tickets/${ticketId}`, {
+      method: "DELETE",
+      headers: headers(token),
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+      setTickets((current) =>
+        current.map((ticket) => (ticket.id === payload.id ? payload : ticket)),
+      );
+      setMessage({
+        type: "success",
+        text:
+          payload.paymentMethod === 1
+            ? "Ticket cancelled and online payment refunded."
+            : "Ticket cancelled. Cash refunds are processed at the cinema box office.",
+      });
+    } else {
+      setMessage({ type: "error", text: payload.message ?? "Ticket could not be cancelled." });
+    }
+  };
+
   return (
     <section className="movie-form profile-form reservations-panel">
       <p className="eyebrow">MY TICKETS</p>
@@ -614,10 +638,14 @@ function TicketsPanel({ token }) {
             const screening = screeningById(ticket.screeningId);
             const reservation = reservationById(ticket.reservationId);
             const seatLabel = ticket.seatLabel || reservation?.seatLabel || "Not recorded";
+            const canCancel =
+              ticket.status === 1 && screening && new Date(screening.startsAtUtc) > new Date();
             return (
               <article className="profile-reservation-card" key={ticket.id}>
                 <div>
-                  <p className="eyebrow">TICKET</p>
+                  <p className="eyebrow">
+                    {ticket.status === 2 ? "USED TICKET" : ticket.status === 3 ? "CANCELLED TICKET" : "TICKET"}
+                  </p>
                   <h3>{screening ? name(movies, screening.movieId, "title") : "Screening unavailable"}</h3>
                   <p>
                     {screening
@@ -645,12 +673,29 @@ function TicketsPanel({ token }) {
                   >
                     Download receipt
                   </button>
+                  {canCancel && (
+                    <button className="danger-button" onClick={() => setConfirmTicketId(ticket.id)}>
+                      Cancel ticket
+                    </button>
+                  )}
                 </div>
               </article>
             );
           })}
         </div>
       )}
+      <ConfirmationDialog
+        isOpen={Boolean(confirmTicketId)}
+        title="Cancel this ticket?"
+        message="The seat will become available again. Online payments are refunded automatically; cash refunds are handled at the cinema box office."
+        confirmLabel="Cancel ticket"
+        onConfirm={() => {
+          const ticketId = confirmTicketId;
+          setConfirmTicketId(null);
+          cancelTicket(ticketId);
+        }}
+        onClose={() => setConfirmTicketId(null)}
+      />
     </section>
   );
 }
