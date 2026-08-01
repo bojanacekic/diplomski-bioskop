@@ -11,6 +11,7 @@ const emptyForm = {
   premiereDate: "",
   ageRating: "Not rated",
   posterBase64: null,
+  verticalPosterBase64: null,
 };
 const formatDate = (value) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -48,12 +49,12 @@ export default function MovieManagementPage({
     setForm((current) => ({ ...current, [name]: value }));
     setErrors((current) => ({ ...current, [name]: "" }));
   };
-  const uploadPoster = (event) => {
+  const uploadPoster = (event, field = "posterBase64") => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () =>
-      setForm((current) => ({ ...current, posterBase64: reader.result }));
+      setForm((current) => ({ ...current, [field]: reader.result }));
     reader.readAsDataURL(file);
   };
 
@@ -244,6 +245,10 @@ export default function MovieManagementPage({
           <label>
             Horizontal poster
             <input type="file" accept="image/*" onChange={uploadPoster} />
+          </label>
+          <label>
+            Vertical poster
+            <input type="file" accept="image/*" onChange={(event) => uploadPoster(event, "verticalPosterBase64")} />
           </label>
           {message && <p className="form-message">{message}</p>}
           <div className="form-actions">

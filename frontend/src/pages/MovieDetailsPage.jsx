@@ -3,6 +3,8 @@ import odysseyPoster from "../assets/odyssey-vertical.jpg";
 import invitePoster from "../assets/invite-vertical.jpg";
 import toyStoryPoster from "../assets/toy-story-vertical.jpg";
 import spiderManPoster from "../assets/spider-man-vertical.jpg";
+import endOfOakStreetPoster from "../assets/end-of-oak-street-vertical.jpg";
+import pawPatrolDinoPoster from "../assets/paw-patrol-dino-vertical.jpg";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 
@@ -17,6 +19,8 @@ const verticalPosters = [
   { terms: ["invite", "poziv"], source: invitePoster },
   { terms: ["toy story", "prica", "priča"], source: toyStoryPoster },
   { terms: ["spider", "spajder"], source: spiderManPoster },
+  { terms: ["end of oak", "oak street"], source: endOfOakStreetPoster },
+  { terms: ["paw patrol", "dino movie"], source: pawPatrolDinoPoster },
 ];
 
 const verticalPosterFor = (title) =>

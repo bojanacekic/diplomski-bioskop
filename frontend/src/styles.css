@@ -810,6 +810,20 @@ form input:focus {
   font-weight: 600;
 }
 
+.recommendations-section {
+  margin-top: 4rem;
+  padding-top: 2.4rem;
+  border-top: 1px solid var(--border);
+}
+
+.recommendations-section h2 {
+  margin: 0.25rem 0;
+}
+
+.recommendations-section p:not(.eyebrow) {
+  color: var(--muted);
+}
+
 .movie-rating {
   display: inline-flex;
   align-items: center;

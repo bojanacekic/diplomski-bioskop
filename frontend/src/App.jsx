@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import lightLogo from "./assets/smart-cinema-logo-light.png";
+import odysseyPoster from "./assets/odyssey-vertical.jpg";
+import invitePoster from "./assets/invite-vertical.jpg";
+import toyStoryPoster from "./assets/toy-story-vertical.jpg";
+import spiderManPoster from "./assets/spider-man-vertical.jpg";
+import endOfOakStreetPoster from "./assets/end-of-oak-street-vertical.jpg";
+import pawPatrolDinoPoster from "./assets/paw-patrol-dino-vertical.jpg";
 import MovieManagementPage from "./pages/MovieManagementPage";
 import HallManagementPage from "./pages/HallManagementPage";
 import HallLayoutPage from "./pages/HallLayoutPage";
@@ -12,6 +18,16 @@ import { ProfilePage, UserManagementPage } from "./pages/UserPages";
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
 const emptyRegister = { username: "", email: "", firstName: "", lastName: "", password: "" };
 const emptyLogin = { usernameOrEmail: "", password: "" };
+const verticalPosterFor = (title = "") => {
+  const normalizedTitle = title.toLowerCase();
+  if (normalizedTitle.includes("odyssey") || normalizedTitle.includes("odiseja")) return odysseyPoster;
+  if (normalizedTitle.includes("invite") || normalizedTitle.includes("poziv")) return invitePoster;
+  if (normalizedTitle.includes("toy story") || normalizedTitle.includes("prica")) return toyStoryPoster;
+  if (normalizedTitle.includes("spider") || normalizedTitle.includes("spajder")) return spiderManPoster;
+  if (normalizedTitle.includes("end of oak") || normalizedTitle.includes("oak street")) return endOfOakStreetPoster;
+  if (normalizedTitle.includes("paw patrol") || normalizedTitle.includes("dino movie")) return pawPatrolDinoPoster;
+  return null;
+};
 
 function App() {
   const [page, setPage] = useState("home");
@@ -381,14 +397,33 @@ function App() {
               </article>
             ))}
           </div>
+          {session && movies.length > 0 && (
+            <section className="recommendations-section">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">PICKED FOR YOU</p>
+                  <h2>Recommended for you</h2>
+                  <p>Films selected from the genres you enjoy.</p>
+                </div>
+              </div>
+              <div className="movie-grid recommendations-grid">
+                {movies.slice(0, 3).map((movie) => (
+                  <article className="movie-card clickable-card" key={`recommended-${movie.id}`} onClick={() => { setSelectedMovie(movie); setPage("movie-details"); }}>
+                    {movie.posterBase64 ? <img src={movie.posterBase64} alt={`${movie.title} poster`} /> : <div className="poster-placeholder">SMART CINEMA</div>}
+                    <div className="movie-info"><p>{movie.genre} · {movie.durationMinutes} min</p><h2>{movie.title}</h2><span>{movie.ageRating}</span></div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
         </section>
       ) : (
         <section className="auth-page">
           <div className="auth-copy">
-            {featuredMovie?.posterBase64 && (
+            {(featuredMovie?.verticalPosterBase64 ?? verticalPosterFor(featuredMovie?.title) ?? featuredMovie?.posterBase64) && (
               <img
                 className="auth-featured-image"
-                src={featuredMovie.posterBase64}
+                src={featuredMovie?.verticalPosterBase64 ?? verticalPosterFor(featuredMovie?.title) ?? featuredMovie?.posterBase64}
                 alt=""
               />
             )}
