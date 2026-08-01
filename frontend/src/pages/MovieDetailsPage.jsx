@@ -50,12 +50,25 @@ export default function MovieDetailsPage({
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [message, setMessage] = useState(null);
   const [rating, setRating] = useState(null);
+  const [ratingState, setRatingState] = useState("hidden");
 
   useEffect(() => {
-    if (!token || !movie) return setRating(null);
-    fetch(`${api}/api/ratings/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((response) => response.ok ? response.json() : [])
-      .then((items) => setRating(items.find((item) => item.movieId === movie.id) ?? null));
+    if (!token || !movie) return setRatingState("hidden");
+    Promise.all([
+      fetch(`${api}/api/ratings/me`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${api}/api/tickets/me`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetch(`${api}/api/screenings`),
+    ]).then(async ([ratingsResponse, ticketsResponse, screeningsResponse]) => {
+      const ratings = ratingsResponse.ok ? await ratingsResponse.json() : [];
+      const tickets = ticketsResponse.ok ? await ticketsResponse.json() : [];
+      const allScreenings = screeningsResponse.ok ? await screeningsResponse.json() : [];
+      setRating(ratings.find((item) => item.movieId === movie.id) ?? null);
+      const matchingTickets = tickets.filter((ticket) => {
+        const screening = allScreenings.find((item) => item.id === ticket.screeningId);
+        return screening?.movieId === movie.id && ticket.status !== 3;
+      });
+      setRatingState(matchingTickets.some((ticket) => ticket.status === 2 || new Date(allScreenings.find((item) => item.id === ticket.screeningId)?.startsAtUtc) <= new Date()) ? "allowed" : matchingTickets.length ? "future" : "unavailable");
+    });
   }, [movie, token]);
 
   const rateMovie = async (score) => {
@@ -183,7 +196,7 @@ export default function MovieDetailsPage({
           <p className="movie-detail-premiere">
             Premiere: {new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(movie.premiereDate))}
           </p>
-          <div className="movie-rating">
+          {ratingState === "allowed" && <div className="movie-rating">
             <span>Your rating: </span>
             {[1, 2, 3, 4, 5].map((score) => (
               <button key={score} className={rating?.score >= score ? "rating-star selected" : "rating-star"} onClick={() => rateMovie(score)}>
@@ -191,6 +204,9 @@ export default function MovieDetailsPage({
               </button>
             ))}
           </div>
+          }
+          {token && ratingState === "future" && <p className="profile-help">You can rate this movie after the screening.</p>}
+          {token && ratingState === "unavailable" && <p className="profile-help">You can rate this movie after attending a screening.</p>}
         </div>
       </div>
 

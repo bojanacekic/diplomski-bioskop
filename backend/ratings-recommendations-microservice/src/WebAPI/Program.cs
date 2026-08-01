@@ -22,6 +22,7 @@ var secret = builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperatio
 builder.WebHost.UseUrls(builder.Configuration["RatingsRecommendations:Url"] ?? "http://localhost:5008");
 builder.Services.AddDbContext<RatingsRecommendationsDbContext>(x => x.UseSqlServer(connection));
 builder.Services.AddScoped<IRatingService, RatingService>();
+builder.Services.AddHttpClient("Gateway", client => client.BaseAddress = new Uri((builder.Configuration["Services:GatewayBaseUrl"] ?? "http://localhost:5001").TrimEnd('/') + "/"));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(x => x.TokenValidationParameters = new() { ValidateIssuer = true, ValidIssuer = issuer, ValidateAudience = true, ValidAudience = audience, ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)), ValidateLifetime = true });
 builder.Services.AddAuthorization();
 builder.Services.AddCors(x => x.AddDefaultPolicy(p => p.WithOrigins(builder.Configuration["Cors__AllowedOrigin"] ?? "http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
@@ -30,6 +31,6 @@ using (var scope = app.Services.CreateScope()) await scope.ServiceProvider.GetRe
 app.UseCors(); app.UseAuthentication(); app.UseAuthorization();
 Guid UserId(ClaimsPrincipal user) { var value = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub); return Guid.TryParse(value, out var id) ? id : throw new UnauthorizedAccessException(); }
 app.MapGet("/api/ratings/me", (ClaimsPrincipal user, IRatingService service, CancellationToken token) => service.GetMineAsync(UserId(user), token)).RequireAuthorization();
-app.MapPost("/api/ratings", async (CreateMovieRatingRequestDto request, ClaimsPrincipal user, IRatingService service, CancellationToken token) => { if (request.MovieId == Guid.Empty || request.Score is < 1 or > 5) return Results.ValidationProblem(new Dictionary<string, string[]> { ["rating"] = ["Movie and a score from 1 to 5 are required."] }); return Results.Ok(await service.SaveAsync(UserId(user), request, token)); }).RequireAuthorization();
+app.MapPost("/api/ratings", async (CreateMovieRatingRequestDto request, HttpRequest httpRequest, ClaimsPrincipal user, IRatingService service, CancellationToken token) => { if (request.MovieId == Guid.Empty || request.Score is < 1 or > 5) return Results.ValidationProblem(new Dictionary<string, string[]> { ["rating"] = ["Movie and a score from 1 to 5 are required."] }); try { return Results.Ok(await service.SaveAsync(UserId(user), httpRequest.Headers.Authorization.ToString(), request, token)); } catch (InvalidOperationException exception) { return Results.Conflict(new { message = exception.Message }); } }).RequireAuthorization();
 app.MapDelete("/api/ratings/{id:guid}", async (Guid id, ClaimsPrincipal user, IRatingService service, CancellationToken token) => await service.DeleteAsync(id, UserId(user), token) ? Results.NoContent() : Results.NotFound()).RequireAuthorization();
 app.Run();
