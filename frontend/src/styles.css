@@ -73,10 +73,32 @@ button {
   font-family: "Playfair Display", serif;
   font-size: 1.13rem;
 }
-nav {
+.topbar nav {
   display: flex;
   align-items: center;
   gap: 1.25rem;
+}
+.primary-nav {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.primary-nav button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  padding: 0.65rem 0.2rem;
+  color: #62574c;
+  font-weight: 600;
+}
+.primary-nav button:hover:not(:disabled),
+.primary-nav button.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+.primary-nav button:disabled {
+  cursor: default;
+  opacity: 0.48;
 }
 .header-link {
   border: 0;
@@ -125,12 +147,31 @@ nav {
   z-index: 10;
   right: 0;
   top: calc(100% + 0.5rem);
-  min-width: 180px;
+  min-width: 220px;
   padding: 0.4rem;
   border: 1px solid var(--line);
   border-radius: 0.55rem;
   background: var(--paper);
   box-shadow: 0 12px 28px rgba(67, 48, 27, 0.14);
+}
+.menu-section-label {
+  display: block;
+  padding: 0.8rem 0.75rem 0.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.menu-section-label:first-child {
+  padding-top: 0.3rem;
+  border-top: 0;
+}
+.account-dropdown .signout-menu-item {
+  margin-top: 0.45rem;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
 }
 .account-dropdown button {
   width: 100%;
@@ -1035,8 +1076,20 @@ form input:focus {
   .logo-text {
     font-size: 1rem;
   }
-  nav {
+  .topbar nav {
     gap: 0.55rem;
+  }
+  .primary-nav {
+    position: static;
+    transform: none;
+    margin-left: auto;
+  }
+  .primary-nav button {
+    padding-inline: 0.1rem;
+    font-size: 0.74rem;
+  }
+  .primary-nav button:disabled {
+    display: none;
   }
   .header-link {
     display: none;

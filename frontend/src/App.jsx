@@ -89,6 +89,9 @@ function App() {
       recommendationReason: recommendation.reason,
     }))
     .filter((movie) => movie.id);
+  const catalogMovies = movies.filter((movie) =>
+    page === "upcoming" ? movie.status === 0 : movie.status === 1,
+  );
 
   const chooseFeaturedMovie = (availableMovies = movies) => {
     if (availableMovies.length > 0) {
@@ -247,7 +250,13 @@ function App() {
           </span>
           <span className="logo-text">Smart Cinema</span>
         </button>
-        <nav>
+        <nav className="primary-nav" aria-label="Main navigation">
+          <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>Naslovna</button>
+          <button className={page === "upcoming" ? "active" : ""} onClick={() => setPage("upcoming")}>Uskoro</button>
+          <button disabled title="U pripremi">O nama</button>
+          <button disabled title="U pripremi">Kontakt</button>
+        </nav>
+        <nav className="account-nav" aria-label="Account navigation">
           {session ? (
             <div className="account-menu" ref={accountMenuRef}>
               <button
@@ -258,6 +267,7 @@ function App() {
               </button>
               {accountMenuOpen && (
                 <div className="account-dropdown">
+                  <span className="menu-section-label">Account</span>
                   <button
                     onClick={() => {
                       setPage("profile");
@@ -268,13 +278,14 @@ function App() {
                   </button>
                   {(isCinemaManager || isAdministrator) && (
                     <>
+                      <span className="menu-section-label">Cinema</span>
                       <button
                         onClick={() => {
                           setPage("manage");
                           setAccountMenuOpen(false);
                         }}
                       >
-                        Manage movies
+                        Movies
                       </button>
                       <button
                         onClick={() => {
@@ -282,7 +293,7 @@ function App() {
                           setAccountMenuOpen(false);
                         }}
                       >
-                        Manage halls
+                        Halls
                       </button>
                       <button
                         onClick={() => {
@@ -290,15 +301,16 @@ function App() {
                           setAccountMenuOpen(false);
                         }}
                       >
-                        Manage screenings
+                        Screenings
                       </button>
+                      <span className="menu-section-label">Operations</span>
                       <button
                         onClick={() => {
                           setPage("reservations");
                           setAccountMenuOpen(false);
                         }}
                       >
-                        Manage reservations
+                        Reservations
                       </button>
                       <button
                         onClick={() => {
@@ -311,14 +323,17 @@ function App() {
                     </>
                   )}
                   {isAdministrator && (
-                    <button
-                      onClick={() => {
-                        setPage("users");
-                        setAccountMenuOpen(false);
-                      }}
-                    >
-                      Manage users
-                    </button>
+                    <>
+                      <span className="menu-section-label">Administration</span>
+                      <button
+                        onClick={() => {
+                          setPage("users");
+                          setAccountMenuOpen(false);
+                        }}
+                      >
+                        Users
+                      </button>
+                    </>
                   )}
                   <button className="signout-menu-item" onClick={signOut}>
                     Sign out
@@ -386,17 +401,17 @@ function App() {
           onBack={() => setPage("home")}
           onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)}
         />
-      ) : page === "home" ? (
+      ) : page === "home" || page === "upcoming" ? (
         <section className="movies-page">
           <div className="movies-heading">
             <div>
               <p className="eyebrow">SMART CINEMA</p>
               <h1>
-                Find your next
+                {page === "upcoming" ? "Coming soon to" : "Find your next"}
                 <br />
-                great story.
+                {page === "upcoming" ? "Smart Cinema." : "great story."}
               </h1>
-              <p>Explore films currently playing at Smart Cinema.</p>
+              <p>{page === "upcoming" ? "Discover films coming soon to Smart Cinema." : "Explore films currently playing at Smart Cinema."}</p>
             </div>
             <label className="search">
               <span>⌕</span>
@@ -417,7 +432,7 @@ function App() {
                 and Gateway are running.
               </p>
             )}
-            {moviesState === "ready" && movies.length === 0 && (
+            {moviesState === "ready" && catalogMovies.length === 0 && (
               <div className="empty-state">
                 <span className="empty-icon">🎬</span>
                 <h2>No films available yet</h2>
@@ -427,7 +442,7 @@ function App() {
                 </p>
               </div>
             )}
-            {movies.map((movie) => (
+            {catalogMovies.map((movie) => (
               <article
                 className="movie-card clickable-card"
                 key={movie.id}
@@ -451,7 +466,7 @@ function App() {
               </article>
             ))}
           </div>
-          {session && recommendedMovies.length > 0 && (
+          {page === "home" && session && recommendedMovies.length > 0 && (
             <section className="recommendations-section">
               <div className="section-heading">
                 <div>
