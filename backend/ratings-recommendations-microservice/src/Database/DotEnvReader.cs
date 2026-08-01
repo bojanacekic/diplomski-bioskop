@@ -1,0 +1,19 @@
+namespace RatingsRecommendations.Database;
+
+public static class DotEnvReader
+{
+    public static void Load(string path)
+    {
+        if (!File.Exists(path)) return;
+        foreach (var line in File.ReadLines(path))
+        {
+            var value = line.Trim();
+            if (string.IsNullOrWhiteSpace(value) || value.StartsWith('#')) continue;
+            var separator = value.IndexOf('=');
+            if (separator <= 0) continue;
+            var key = value[..separator].Trim();
+            if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(key)))
+                Environment.SetEnvironmentVariable(key, value[(separator + 1)..].Trim());
+        }
+    }
+}

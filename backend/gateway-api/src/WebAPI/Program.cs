@@ -40,6 +40,10 @@ var paymentsServiceBaseUrl =
     builder.Configuration["Services:PaymentsBaseUrl"]
     ?? builder.Configuration["Services__PaymentsBaseUrl"]
     ?? throw new InvalidOperationException("Services:PaymentsBaseUrl is not configured.");
+var ratingsRecommendationsServiceBaseUrl =
+    builder.Configuration["Services:RatingsRecommendationsBaseUrl"]
+    ?? builder.Configuration["Services__RatingsRecommendationsBaseUrl"]
+    ?? throw new InvalidOperationException("Services:RatingsRecommendationsBaseUrl is not configured.");
 var allowedOrigin =
     builder.Configuration["Cors:AllowedOrigin"]
     ?? builder.Configuration["Cors__AllowedOrigin"]
@@ -109,6 +113,12 @@ builder
                 RouteId = "payments-route",
                 ClusterId = "payments-cluster",
                 Match = new RouteMatch { Path = "/api/payments/{**catch-all}" },
+            },
+            new RouteConfig
+            {
+                RouteId = "ratings-route",
+                ClusterId = "ratings-cluster",
+                Match = new RouteMatch { Path = "/api/ratings/{**catch-all}" },
             },
         ],
         [
@@ -180,6 +190,17 @@ builder
                     ["payments-service"] = new()
                     {
                         Address = $"{paymentsServiceBaseUrl.TrimEnd('/')}/",
+                    },
+                },
+            },
+            new ClusterConfig
+            {
+                ClusterId = "ratings-cluster",
+                Destinations = new Dictionary<string, DestinationConfig>
+                {
+                    ["ratings-service"] = new()
+                    {
+                        Address = $"{ratingsRecommendationsServiceBaseUrl.TrimEnd('/')}/",
                     },
                 },
             },
