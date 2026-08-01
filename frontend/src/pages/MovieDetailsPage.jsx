@@ -7,7 +7,7 @@ import spiderManPoster from "../assets/spider-man-vertical.jpg";
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 
 const formatDateTime = (value) =>
-  new Intl.DateTimeFormat("sr-RS", {
+  new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
@@ -49,6 +49,24 @@ export default function MovieDetailsPage({
   const [reservedSeats, setReservedSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [message, setMessage] = useState(null);
+  const [rating, setRating] = useState(null);
+
+  useEffect(() => {
+    if (!token || !movie) return setRating(null);
+    fetch(`${api}/api/ratings/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((response) => response.ok ? response.json() : [])
+      .then((items) => setRating(items.find((item) => item.movieId === movie.id) ?? null));
+  }, [movie, token]);
+
+  const rateMovie = async (score) => {
+    if (!token) return onSignIn();
+    const response = await fetch(`${api}/api/ratings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ movieId: movie.id, score }),
+    });
+    if (response.ok) setRating(await response.json());
+  };
 
   const loadReservedSeats = async (screeningId) => {
     if (!screeningId) return setReservedSeats([]);
@@ -163,8 +181,16 @@ export default function MovieDetailsPage({
           </p>
           <p>{movie.description}</p>
           <p className="movie-detail-premiere">
-            Premiere: {new Intl.DateTimeFormat("sr-RS", { dateStyle: "long" }).format(new Date(movie.premiereDate))}
+            Premiere: {new Intl.DateTimeFormat("en-GB", { dateStyle: "long" }).format(new Date(movie.premiereDate))}
           </p>
+          <div className="movie-rating">
+            <span>Your rating: </span>
+            {[1, 2, 3, 4, 5].map((score) => (
+              <button key={score} className={rating?.score >= score ? "rating-star selected" : "rating-star"} onClick={() => rateMovie(score)}>
+                ★
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

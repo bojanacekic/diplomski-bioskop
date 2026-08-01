@@ -809,6 +809,43 @@ form input:focus {
   color: var(--muted);
   font-weight: 600;
 }
+
+.movie-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  margin-top: 1.4rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.rating-star {
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #d8cdbd;
+  cursor: pointer;
+  font-size: 1.3rem;
+  line-height: 1;
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+.rating-star:hover,
+.rating-star:focus-visible {
+  color: #c58a25;
+  transform: translateY(-1px) scale(1.08);
+}
+
+.rating-star.selected {
+  color: #b87912;
+}
 .reservation-section {
   margin-top: 3rem;
   padding-top: 2.5rem;

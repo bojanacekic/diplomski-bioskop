@@ -99,7 +99,7 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
     } else setMessage("The screening could not be deleted.");
   };
   const dateTime = (value) =>
-    new Intl.DateTimeFormat("sr-RS", {
+    new Intl.DateTimeFormat("en-GB", {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(new Date(value));
