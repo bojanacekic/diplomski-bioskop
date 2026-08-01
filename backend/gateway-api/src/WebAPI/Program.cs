@@ -116,6 +116,12 @@ builder
             },
             new RouteConfig
             {
+                RouteId = "recommendations-route",
+                ClusterId = "ratings-cluster",
+                Match = new RouteMatch { Path = "/api/recommendations/{**catch-all}" },
+            },
+            new RouteConfig
+            {
                 RouteId = "ratings-route",
                 ClusterId = "ratings-cluster",
                 Match = new RouteMatch { Path = "/api/ratings/{**catch-all}" },

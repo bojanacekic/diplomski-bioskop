@@ -279,18 +279,18 @@ app.MapGet(
             CancellationToken token
         ) =>
         {
-            var tickets = await service.GetReceiptDataAsync(
+            var ticket = await service.GetPdfDataAsync(
                 id,
                 CurrentUserId(user),
                 httpRequest.Headers.Authorization.ToString(),
                 token
             );
-            if (tickets.Count == 0)
+            if (ticket is null)
                 return Results.NotFound();
 
-            var fileName = $"smart-cinema-tickets-{tickets[0].TicketNumber}.pdf";
+            var fileName = $"smart-cinema-ticket-{ticket.TicketNumber}.pdf";
             return Results.File(
-                ticketPdfService.CreatePurchaseTickets(tickets),
+                ticketPdfService.Create(ticket),
                 "application/pdf",
                 fileName
             );

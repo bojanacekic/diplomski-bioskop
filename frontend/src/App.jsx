@@ -22,8 +22,27 @@ const UserManagementPage = lazy(() =>
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
 let cachedMovies = null;
+let pendingRecommendations = null;
+let pendingRecommendationsToken = null;
 const posterUrlFor = (movie, vertical = false) =>
   `${apiUrl}/api/movies/${movie.id}/poster${vertical ? "?vertical=true" : ""}`;
+const loadRecommendations = (accessToken) => {
+  if (pendingRecommendations && pendingRecommendationsToken === accessToken)
+    return pendingRecommendations;
+
+  pendingRecommendationsToken = accessToken;
+  const request = fetch(`${apiUrl}/api/recommendations/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }).then((response) => (response.ok ? response.json() : []));
+  const trackedRequest = request.finally(() => {
+    if (pendingRecommendations === trackedRequest) {
+      pendingRecommendations = null;
+      pendingRecommendationsToken = null;
+    }
+  });
+  pendingRecommendations = trackedRequest;
+  return pendingRecommendations;
+};
 const emptyRegister = { username: "", email: "", firstName: "", lastName: "", password: "" };
 const emptyLogin = { usernameOrEmail: "", password: "" };
 const verticalPosterFor = (title = "") => {
@@ -123,17 +142,17 @@ function App() {
       setRecommendations([]);
       return;
     }
-    const controller = new AbortController();
-    fetch(`${apiUrl}/api/recommendations/me`, {
-      headers: { Authorization: `Bearer ${session.accessToken}` },
-      signal: controller.signal,
-    })
-      .then((response) => (response.ok ? response.json() : []))
-      .then(setRecommendations)
-      .catch((error) => {
-        if (error.name !== "AbortError") setRecommendations([]);
+    let active = true;
+    loadRecommendations(session.accessToken)
+      .then((items) => {
+        if (active) setRecommendations(items);
+      })
+      .catch(() => {
+        if (active) setRecommendations([]);
       });
-    return () => controller.abort();
+    return () => {
+      active = false;
+    };
   }, [session?.accessToken, moviesRefreshKey, page]);
 
   useEffect(() => {
