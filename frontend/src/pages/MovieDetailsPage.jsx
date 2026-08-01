@@ -7,6 +7,8 @@ import endOfOakStreetPoster from "../assets/end-of-oak-street-vertical.jpg";
 import pawPatrolDinoPoster from "../assets/paw-patrol-dino-vertical.jpg";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
+const posterUrlFor = (movie, vertical = false) =>
+  `${api}/api/movies/${movie.id}/poster${vertical ? "?vertical=true" : ""}`;
 
 const formatDateTime = (value) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -173,7 +175,7 @@ export default function MovieDetailsPage({
   };
 
   if (!movie) return null;
-  const verticalPoster = verticalPosterFor(movie.title) ?? movie.posterBase64;
+  const verticalPoster = verticalPosterFor(movie.title) ?? posterUrlFor(movie, true);
   const posterPosition = posterPositionFor(movie.title);
 
   return (

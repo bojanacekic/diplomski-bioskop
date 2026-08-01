@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import lightLogo from "./assets/smart-cinema-logo-light.png";
 import odysseyPoster from "./assets/odyssey-vertical.jpg";
 import invitePoster from "./assets/invite-vertical.jpg";
@@ -6,16 +6,24 @@ import toyStoryPoster from "./assets/toy-story-vertical.jpg";
 import spiderManPoster from "./assets/spider-man-vertical.jpg";
 import endOfOakStreetPoster from "./assets/end-of-oak-street-vertical.jpg";
 import pawPatrolDinoPoster from "./assets/paw-patrol-dino-vertical.jpg";
-import MovieManagementPage from "./pages/MovieManagementPage";
-import HallManagementPage from "./pages/HallManagementPage";
-import HallLayoutPage from "./pages/HallLayoutPage";
-import ScreeningManagementPage from "./pages/ScreeningManagementPage";
-import MovieDetailsPage from "./pages/MovieDetailsPage";
-import ReservationManagementPage from "./pages/ReservationManagementPage";
-import TicketValidationPage from "./pages/TicketValidationPage";
-import { ProfilePage, UserManagementPage } from "./pages/UserPages";
+const MovieManagementPage = lazy(() => import("./pages/MovieManagementPage"));
+const HallManagementPage = lazy(() => import("./pages/HallManagementPage"));
+const HallLayoutPage = lazy(() => import("./pages/HallLayoutPage"));
+const ScreeningManagementPage = lazy(() => import("./pages/ScreeningManagementPage"));
+const MovieDetailsPage = lazy(() => import("./pages/MovieDetailsPage"));
+const ReservationManagementPage = lazy(() => import("./pages/ReservationManagementPage"));
+const TicketValidationPage = lazy(() => import("./pages/TicketValidationPage"));
+const ProfilePage = lazy(() =>
+  import("./pages/UserPages").then((module) => ({ default: module.ProfilePage })),
+);
+const UserManagementPage = lazy(() =>
+  import("./pages/UserPages").then((module) => ({ default: module.UserManagementPage })),
+);
 
 const apiUrl = import.meta.env.VITE_API_GATEWAY_URL;
+let cachedMovies = null;
+const posterUrlFor = (movie, vertical = false) =>
+  `${apiUrl}/api/movies/${movie.id}/poster${vertical ? "?vertical=true" : ""}`;
 const emptyRegister = { username: "", email: "", firstName: "", lastName: "", password: "" };
 const emptyLogin = { usernameOrEmail: "", password: "" };
 const verticalPosterFor = (title = "") => {
@@ -32,10 +40,12 @@ const verticalPosterFor = (title = "") => {
 function App() {
   const [page, setPage] = useState("home");
   const [authMode, setAuthMode] = useState("login");
-  const [movies, setMovies] = useState([]);
+  const [movies, setMovies] = useState(() => cachedMovies ?? []);
   const [moviesRefreshKey, setMoviesRefreshKey] = useState(0);
   const [featuredMovie, setFeaturedMovie] = useState(null);
-  const [moviesState, setMoviesState] = useState("loading");
+  const [moviesState, setMoviesState] = useState(() =>
+    cachedMovies ? "ready" : "loading",
+  );
   const [search, setSearch] = useState("");
   const [registerForm, setRegisterForm] = useState(emptyRegister);
   const [loginForm, setLoginForm] = useState(emptyLogin);
@@ -67,15 +77,19 @@ function App() {
 
     const loadMovies = async () => {
       if (!apiUrl) return setMoviesState("error");
-      setMoviesState("loading");
+      // Keep already rendered films visible while refreshing them in the background.
+      if (!cachedMovies || search) setMoviesState("loading");
 
       try {
-        const query = search ? `?search=${encodeURIComponent(search)}` : "";
+        const query = search
+          ? `?search=${encodeURIComponent(search)}&includeImages=false`
+          : "?includeImages=false";
         const response = await fetch(`${apiUrl}/api/movies${query}`, {
           signal: controller.signal,
         });
         if (!response.ok) throw new Error();
         const loadedMovies = await response.json();
+        if (!search) cachedMovies = loadedMovies;
         setMovies(loadedMovies);
         setFeaturedMovie(
           (currentMovie) =>
@@ -89,7 +103,8 @@ function App() {
       }
     };
 
-    const timeout = setTimeout(loadMovies, 200);
+    // The first request must start immediately. Only debounce an active search.
+    const timeout = setTimeout(loadMovies, search ? 200 : 0);
     return () => {
       clearTimeout(timeout);
       controller.abort();
@@ -280,6 +295,7 @@ function App() {
         </nav>
       </header>
 
+      <Suspense fallback={<p className="state-message">Loading page...</p>}>
       {page === "profile" ? (
         <ProfilePage
           token={session?.accessToken}
@@ -376,17 +392,11 @@ function App() {
                   setPage("movie-details");
                 }}
               >
-                {movie.posterBase64 ? (
-                  <img src={movie.posterBase64} alt={`${movie.title} poster`} />
-                ) : (
-                  <div className="poster-placeholder">
-                    <span>
-                      SMART
-                      <br />
-                      CINEMA
-                    </span>
-                  </div>
-                )}
+                <img
+                  src={posterUrlFor(movie)}
+                  alt={`${movie.title} poster`}
+                  loading="lazy"
+                />
                 <div className="movie-info">
                   <p>
                     {movie.genre} · {movie.durationMinutes} min
@@ -409,7 +419,7 @@ function App() {
               <div className="movie-grid recommendations-grid">
                 {movies.slice(0, 3).map((movie) => (
                   <article className="movie-card clickable-card" key={`recommended-${movie.id}`} onClick={() => { setSelectedMovie(movie); setPage("movie-details"); }}>
-                    {movie.posterBase64 ? <img src={movie.posterBase64} alt={`${movie.title} poster`} /> : <div className="poster-placeholder">SMART CINEMA</div>}
+                    <img src={posterUrlFor(movie)} alt={`${movie.title} poster`} loading="lazy" />
                     <div className="movie-info"><p>{movie.genre} · {movie.durationMinutes} min</p><h2>{movie.title}</h2><span>{movie.ageRating}</span></div>
                   </article>
                 ))}
@@ -420,10 +430,10 @@ function App() {
       ) : (
         <section className="auth-page">
           <div className="auth-copy">
-            {(featuredMovie?.verticalPosterBase64 ?? verticalPosterFor(featuredMovie?.title) ?? featuredMovie?.posterBase64) && (
+            {featuredMovie && (
               <img
                 className="auth-featured-image"
-                src={featuredMovie?.verticalPosterBase64 ?? verticalPosterFor(featuredMovie?.title) ?? featuredMovie?.posterBase64}
+                src={verticalPosterFor(featuredMovie.title) ?? posterUrlFor(featuredMovie, true)}
                 alt=""
               />
             )}
@@ -519,6 +529,7 @@ function App() {
           </div>
         </section>
       )}
+      </Suspense>
     </main>
   );
 }

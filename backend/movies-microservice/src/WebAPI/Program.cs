@@ -79,6 +79,7 @@ app.MapGet(
         string? search,
         DateOnly? premiereDate,
         MovieStatus? status,
+        bool? includeImages,
         IMovieService service,
         CancellationToken token
     ) =>
@@ -89,10 +90,37 @@ app.MapGet(
                     Search = search,
                     PremiereDate = premiereDate,
                     Status = status,
+                    IncludeImages = includeImages ?? true,
                 },
                 token
             )
         )
+);
+
+app.MapGet(
+    "/api/movies/{id:guid}/poster",
+    async (Guid id, bool? vertical, HttpContext context, IMovieService service, CancellationToken token) =>
+    {
+        var encodedImage = await service.GetImageAsync(id, vertical ?? false, token);
+        if (string.IsNullOrWhiteSpace(encodedImage))
+            return Results.NotFound();
+
+        try
+        {
+            var commaIndex = encodedImage.IndexOf(',');
+            var hasDataPrefix = encodedImage.StartsWith("data:", StringComparison.OrdinalIgnoreCase);
+            var contentType = hasDataPrefix && commaIndex > 5
+                ? encodedImage[5..encodedImage.IndexOf(';')]
+                : "image/jpeg";
+            var base64 = hasDataPrefix && commaIndex >= 0 ? encodedImage[(commaIndex + 1)..] : encodedImage;
+            context.Response.Headers.CacheControl = "public,max-age=86400";
+            return Results.File(Convert.FromBase64String(base64), contentType);
+        }
+        catch (FormatException)
+        {
+            return Results.NotFound();
+        }
+    }
 );
 
 app.MapGet(

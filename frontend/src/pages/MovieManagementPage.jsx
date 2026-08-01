@@ -35,7 +35,7 @@ export default function MovieManagementPage({
 
   const loadMovies = async () => {
     const response = await fetch(
-      `${apiUrl}/api/movies${search ? `?search=${encodeURIComponent(search)}` : ""}`,
+      `${apiUrl}/api/movies${search ? `?search=${encodeURIComponent(search)}&includeImages=false` : "?includeImages=false"}`,
     );
     if (response.ok) setMovies(await response.json());
   };
@@ -58,9 +58,11 @@ export default function MovieManagementPage({
     reader.readAsDataURL(file);
   };
 
-  const editMovie = (movie) => {
+  const editMovie = async (movie) => {
+    const response = await fetch(`${apiUrl}/api/movies/${movie.id}`);
+    const fullMovie = response.ok ? await response.json() : movie;
     setEditingId(movie.id);
-    setForm({ ...movie, premiereDate: movie.premiereDate.slice(0, 10) });
+    setForm({ ...fullMovie, premiereDate: fullMovie.premiereDate.slice(0, 10) });
     setMessage("");
   };
 

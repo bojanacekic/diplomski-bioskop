@@ -26,14 +26,24 @@ public sealed class MovieService(MoviesDbContext db) : IMovieService
         else
             query = query.Where(x => x.Status != MovieStatus.Withdrawn);
 
-        return await query.OrderBy(x => x.PremiereDate).Select(Project()).ToListAsync(token);
+        return await query
+            .OrderBy(x => x.PremiereDate)
+            .Select(Project(request.IncludeImages))
+            .ToListAsync(token);
     }
 
     public async Task<MovieResponseDto?> GetByIdAsync(Guid id, CancellationToken token) =>
         await db
             .Movies.AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(Project())
+            .Select(Project(includeImages: true))
+            .SingleOrDefaultAsync(token);
+
+    public Task<string?> GetImageAsync(Guid id, bool vertical, CancellationToken token) =>
+        db.Movies
+            .AsNoTracking()
+            .Where(movie => movie.Id == id)
+            .Select(movie => vertical ? movie.VerticalPosterBase64 : movie.PosterBase64)
             .SingleOrDefaultAsync(token);
 
     public async Task<MovieResponseDto> CreateAsync(
@@ -116,7 +126,9 @@ public sealed class MovieService(MoviesDbContext db) : IMovieService
         return true;
     }
 
-    private static System.Linq.Expressions.Expression<Func<Movie, MovieResponseDto>> Project() =>
+    private static System.Linq.Expressions.Expression<Func<Movie, MovieResponseDto>> Project(
+        bool includeImages
+    ) =>
         movie => new MovieResponseDto
         {
             Id = movie.Id,
@@ -126,8 +138,8 @@ public sealed class MovieService(MoviesDbContext db) : IMovieService
             DurationMinutes = movie.DurationMinutes,
             PremiereDate = movie.PremiereDate,
             AgeRating = movie.AgeRating,
-            PosterBase64 = movie.PosterBase64,
-            VerticalPosterBase64 = movie.VerticalPosterBase64,
+            PosterBase64 = includeImages ? movie.PosterBase64 : null,
+            VerticalPosterBase64 = includeImages ? movie.VerticalPosterBase64 : null,
             AverageRating = movie.AverageRating,
             Status = movie.Status,
         };

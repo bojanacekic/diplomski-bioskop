@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ConfirmationDialog from "../components/ConfirmationDialog";
+import { getCinemaReferenceData } from "../services/cinemaReferenceService";
 
 const api = import.meta.env.VITE_API_GATEWAY_URL;
 
@@ -30,12 +31,10 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
       setState("loading");
 
       try {
-        const [reservationsResponse, moviesResponse, hallsResponse, screeningsResponse, ticketsResponse] =
+        const [reservationsResponse, referenceData, ticketsResponse] =
           await Promise.all([
             fetch(`${api}/api/reservations`, { headers: headers(accessToken) }),
-            fetch(`${api}/api/movies`),
-            fetch(`${api}/api/halls`),
-            fetch(`${api}/api/screenings`),
+            getCinemaReferenceData(),
             fetch(`${api}/api/tickets`, { headers: headers(accessToken) }),
           ]);
 
@@ -43,13 +42,15 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
 
         const loadedReservations = await reservationsResponse.json();
         setReservations(loadedReservations);
-        setMovies(moviesResponse.ok ? await moviesResponse.json() : []);
-        setHalls(hallsResponse.ok ? await hallsResponse.json() : []);
-        setScreenings(screeningsResponse.ok ? await screeningsResponse.json() : []);
+        setMovies(referenceData.movies);
+        setHalls(referenceData.halls);
+        setScreenings(referenceData.screenings);
         setTickets(ticketsResponse.ok ? await ticketsResponse.json() : []);
+        // Customer enrichment must not block the reservation list from rendering.
+        setState("ready");
 
         const customerIds = [...new Set(loadedReservations.map((item) => item.userId))];
-        const customerEntries = await Promise.all(
+        const customerResults = await Promise.allSettled(
           customerIds.map(async (customerId) => {
             const response = await fetch(
               `${api}/api/users/${customerId}/reservation-customer`,
@@ -58,8 +59,13 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
             return [customerId, response.ok ? await response.json() : null];
           }),
         );
-        setCustomers(Object.fromEntries(customerEntries));
-        setState("ready");
+        setCustomers(
+          Object.fromEntries(
+            customerResults
+              .filter((result) => result.status === "fulfilled")
+              .map((result) => result.value),
+          ),
+        );
       } catch {
         setState("error");
       }

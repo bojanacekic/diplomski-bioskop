@@ -23,7 +23,7 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
   const load = async () => {
     const [moviesResponse, hallsResponse, screeningsResponse] =
       await Promise.all([
-        fetch(`${api}/api/movies`),
+        fetch(`${api}/api/movies?includeImages=false`),
         fetch(`${api}/api/halls`),
         fetch(`${api}/api/screenings`),
       ]);

@@ -9,6 +9,7 @@ public interface IMovieService
         CancellationToken token
     );
     Task<MovieResponseDto?> GetByIdAsync(Guid id, CancellationToken token);
+    Task<string?> GetImageAsync(Guid id, bool vertical, CancellationToken token);
     Task<MovieResponseDto> CreateAsync(CreateMovieRequestDto request, CancellationToken token);
     Task<MovieResponseDto?> UpdateAsync(
         Guid id,

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { getCinemaReferenceData } from "../services/cinemaReferenceService";
 import ConfirmationDialog from "../components/ConfirmationDialog";
 import PaymentModal from "../components/PaymentModal";
 
@@ -336,18 +337,16 @@ function ReservationsPanel({ token }) {
   const [purchasing, setPurchasing] = useState(false);
 
   const load = async () => {
-    const [reservationsResponse, screeningsResponse, moviesResponse, hallsResponse, ticketsResponse] =
+    const [reservationsResponse, referenceData, ticketsResponse] =
       await Promise.all([
         fetch(`${api}/api/reservations/me`, { headers: headers(token) }),
-        fetch(`${api}/api/screenings`),
-        fetch(`${api}/api/movies`),
-        fetch(`${api}/api/halls`),
+        getCinemaReferenceData(),
         fetch(`${api}/api/tickets/me`, { headers: headers(token) }),
       ]);
     if (reservationsResponse.ok) setReservations(await reservationsResponse.json());
-    if (screeningsResponse.ok) setScreenings(await screeningsResponse.json());
-    if (moviesResponse.ok) setMovies(await moviesResponse.json());
-    if (hallsResponse.ok) setHalls(await hallsResponse.json());
+    setScreenings(referenceData.screenings);
+    setMovies(referenceData.movies);
+    setHalls(referenceData.halls);
     if (ticketsResponse.ok) setTickets(await ticketsResponse.json());
   };
 
@@ -576,17 +575,15 @@ function TicketsPanel({ token }) {
   useEffect(() => {
     Promise.all([
       fetch(`${api}/api/tickets/me`, { headers: headers(token) }),
-      fetch(`${api}/api/screenings`),
-      fetch(`${api}/api/movies`),
-      fetch(`${api}/api/halls`),
+      getCinemaReferenceData(),
       fetch(`${api}/api/reservations/me`, { headers: headers(token) }),
     ])
-      .then(async ([ticketsResponse, screeningsResponse, moviesResponse, hallsResponse, reservationsResponse]) => {
+      .then(async ([ticketsResponse, referenceData, reservationsResponse]) => {
         if (!ticketsResponse.ok) throw new Error();
         setTickets(await ticketsResponse.json());
-        setScreenings(screeningsResponse.ok ? await screeningsResponse.json() : []);
-        setMovies(moviesResponse.ok ? await moviesResponse.json() : []);
-        setHalls(hallsResponse.ok ? await hallsResponse.json() : []);
+        setScreenings(referenceData.screenings);
+        setMovies(referenceData.movies);
+        setHalls(referenceData.halls);
         setReservations(reservationsResponse.ok ? await reservationsResponse.json() : []);
       })
       .catch(() =>
