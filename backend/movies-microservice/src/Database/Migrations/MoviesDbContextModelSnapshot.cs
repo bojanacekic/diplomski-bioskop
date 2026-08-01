@@ -50,8 +50,11 @@ namespace Movies.Database.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("PosterBase64")
-                        .HasColumnType("nvarchar(max)");
+            b.Property<string>("PosterBase64")
+                .HasColumnType("nvarchar(max)");
+
+            b.Property<string>("VerticalPosterBase64")
+                .HasColumnType("nvarchar(max)");
 
                     b.Property<DateOnly>("PremiereDate")
                         .HasColumnType("date");
