@@ -1,0 +1,9 @@
+# Temporary PDF previews and .NET build artifacts
+tmp/
+output/pdf/*-preview.pdf
+
+# Common generated build output
+**/bin/
+**/obj/
+frontend/dist/
+frontend/node_modules/
