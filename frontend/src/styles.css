@@ -502,11 +502,19 @@ form input:focus {
   box-sizing: border-box;
   white-space: nowrap;
 }
-.user-management-page .management-heading .header-link,
-.ticket-validation-page .management-heading .header-link {
+.management-heading .management-back-button {
   position: absolute;
   top: 61px;
   right: 0;
+  display: block;
+  flex: 0 0 160px;
+  inline-size: 160px;
+  min-inline-size: 160px;
+  max-inline-size: 160px;
+  text-align: right;
+}
+.ticket-validation-page .management-back-button {
+  right: 1rem;
 }
 .management-heading h1 {
   font-size: clamp(2.8rem, 5vw, 4.5rem);
@@ -1287,9 +1295,13 @@ form input:focus {
     margin-top: 1rem;
     justify-content: flex-start;
   }
-  .user-management-page .management-heading .header-link,
-  .ticket-validation-page .management-heading .header-link {
+  .management-heading .management-back-button {
     position: static;
+    inline-size: 160px;
+    text-align: left;
+  }
+  .ticket-validation-page .management-back-button {
+    right: auto;
   }
   .management-heading h1 {
     font-size: 3rem;

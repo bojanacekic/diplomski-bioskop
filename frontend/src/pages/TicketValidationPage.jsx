@@ -40,7 +40,7 @@ export default function TicketValidationPage({ accessToken, onBack }) {
         <div>
           <h1>Validate tickets</h1>
         </div>
-        <button className="header-link" onClick={onBack}>
+        <button className="header-link management-back-button" onClick={onBack}>
           ← Back to movies
         </button>
       </div>

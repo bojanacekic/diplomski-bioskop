@@ -179,7 +179,7 @@ export function ProfilePage({ token, onBack }) {
         <div>
           <h1>My profile</h1>
         </div>
-        <button className="header-link" onClick={onBack}>
+        <button className="header-link management-back-button" onClick={onBack}>
           ← Back to movies
         </button>
       </div>
@@ -795,7 +795,7 @@ export function UserManagementPage({ token, onBack }) {
         <div>
           <h1>Manage users</h1>
         </div>
-        <button className="header-link" onClick={onBack}>
+        <button className="header-link management-back-button" onClick={onBack}>
           ← Back to movies
         </button>
       </div>
