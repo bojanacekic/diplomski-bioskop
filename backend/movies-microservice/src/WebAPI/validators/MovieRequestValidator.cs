@@ -12,6 +12,7 @@ public sealed class MovieRequestValidator : IMovieRequestValidator
             request.DurationMinutes,
             request.PremiereDate,
             request.AgeRating,
+            request.TrailerUrl,
             request.Status
         );
 
@@ -23,6 +24,7 @@ public sealed class MovieRequestValidator : IMovieRequestValidator
             request.DurationMinutes,
             request.PremiereDate,
             request.AgeRating,
+            request.TrailerUrl,
             null
         );
 
@@ -33,6 +35,7 @@ public sealed class MovieRequestValidator : IMovieRequestValidator
         int durationMinutes,
         DateOnly premiereDate,
         string ageRating,
+        string? trailerUrl,
         MovieStatus? status
     )
     {
@@ -71,12 +74,27 @@ public sealed class MovieRequestValidator : IMovieRequestValidator
         );
         AddIfInvalid(
             errors,
+            "trailerUrl",
+            !IsValidYouTubeUrl(trailerUrl),
+            "Trailer URL must be a valid YouTube link and can contain up to 500 characters."
+        );
+        AddIfInvalid(
+            errors,
             "status",
             status.HasValue && !Enum.IsDefined(status.Value),
             "A valid movie status is required."
         );
 
         return errors;
+    }
+
+    private static bool IsValidYouTubeUrl(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        if (value.Trim().Length > 500 || !Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri))
+            return false;
+        var host = uri.Host.ToLowerInvariant();
+        return host is "youtu.be" or "www.youtu.be" or "youtube.com" or "www.youtube.com" or "youtube-nocookie.com" or "www.youtube-nocookie.com";
     }
 
     private static void AddIfInvalid(

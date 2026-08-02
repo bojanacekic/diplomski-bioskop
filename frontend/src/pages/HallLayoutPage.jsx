@@ -11,7 +11,6 @@
     <section className="management-page hall-layout-page">
       <div className="management-heading">
         <div>
-          <p className="eyebrow">HALL LAYOUT</p>
           <h1>{hall.name}.</h1>
           <p>
             {["Standard", "Premium", "IMAX", "3D"][hall.type]} hall ·{" "}

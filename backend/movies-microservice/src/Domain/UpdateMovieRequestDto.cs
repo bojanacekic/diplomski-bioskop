@@ -10,4 +10,5 @@ public sealed class UpdateMovieRequestDto
     public string AgeRating { get; init; } = string.Empty;
     public string? PosterBase64 { get; init; }
     public string? VerticalPosterBase64 { get; init; }
+    public string? TrailerUrl { get; init; }
 }

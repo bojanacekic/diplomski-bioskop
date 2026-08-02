@@ -78,7 +78,6 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
     <section className="management-page">
       <div className="management-heading">
         <div>
-          <p className="eyebrow">CINEMA MANAGER</p>
           <h1>Manage halls</h1>
           <p>Create cinema halls and define their seating capacity.</p>
         </div>

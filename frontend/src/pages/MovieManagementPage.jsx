@@ -12,6 +12,7 @@ const emptyForm = {
   ageRating: "Not rated",
   posterBase64: null,
   verticalPosterBase64: null,
+  trailerUrl: "",
 };
 const formatDate = (value) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -141,7 +142,6 @@ export default function MovieManagementPage({
     <section className="management-page">
       <div className="management-heading">
         <div>
-          <p className="eyebrow">CINEMA MANAGER</p>
           <h1>Manage movies</h1>
           <p>Add a new movie, edit its details or update its cinema status.</p>
         </div>
@@ -242,6 +242,20 @@ export default function MovieManagementPage({
             />
             {errors.description && (
               <small className="field-error">{errors.description}</small>
+            )}
+          </label>
+          <label>
+            YouTube trailer URL (optional)
+            <input
+              className={errors.trailerUrl ? "invalid-field" : ""}
+              name="trailerUrl"
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={form.trailerUrl ?? ""}
+              onChange={updateField}
+            />
+            {errors.trailerUrl && (
+              <small className="field-error">{errors.trailerUrl}</small>
             )}
           </label>
           <label>

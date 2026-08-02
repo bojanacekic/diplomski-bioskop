@@ -38,12 +38,15 @@ export default function TicketValidationPage({ accessToken, onBack }) {
     <section className="management-page ticket-validation-page">
       <div className="management-heading">
         <div>
-          <p className="eyebrow">CINEMA MANAGER</p>
           <h1>Validate tickets</h1>
-          <p>Scan or enter the QR value from a Smart Cinema ticket at the entrance.</p>
         </div>
-        <button className="header-link" onClick={onBack}>← Back to movies</button>
+        <button className="header-link" onClick={onBack}>
+          ← Back to movies
+        </button>
       </div>
+      <p className="validation-intro">
+        Scan or enter the QR value from a Smart Cinema ticket at the entrance.
+      </p>
       <form className="movie-form validation-form" onSubmit={validate}>
         <label>
           QR code or ticket number

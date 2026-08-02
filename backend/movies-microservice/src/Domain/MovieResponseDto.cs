@@ -11,6 +11,7 @@ public sealed class MovieResponseDto
     public string AgeRating { get; init; } = string.Empty;
     public string? PosterBase64 { get; init; }
     public string? VerticalPosterBase64 { get; init; }
+    public string? TrailerUrl { get; init; }
     public decimal AverageRating { get; init; }
     public MovieStatus Status { get; init; }
 }

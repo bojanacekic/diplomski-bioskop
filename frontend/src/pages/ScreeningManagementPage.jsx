@@ -112,7 +112,6 @@ export default function ScreeningManagementPage({ accessToken, onBack }) {
     <section className="management-page">
       <div className="management-heading">
         <div>
-          <p className="eyebrow">CINEMA MANAGER</p>
           <h1>Manage screenings</h1>
           <p>Schedule films in halls and set the base ticket price.</p>
         </div>

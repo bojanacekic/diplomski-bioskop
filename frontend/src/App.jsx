@@ -113,11 +113,19 @@ function App() {
         const query = search
           ? `?search=${encodeURIComponent(search)}&includeImages=false`
           : "?includeImages=false";
-        const response = await fetch(`${apiUrl}/api/movies${query}`, {
-          signal: controller.signal,
-        });
+        const [response, averagesResponse] = await Promise.all([
+          fetch(`${apiUrl}/api/movies${query}`, { signal: controller.signal }),
+          fetch(`${apiUrl}/api/ratings/averages`, { signal: controller.signal }),
+        ]);
         if (!response.ok) throw new Error();
-        const loadedMovies = await response.json();
+        const rawMovies = await response.json();
+        const averages = averagesResponse.ok ? await averagesResponse.json() : [];
+        const averageByMovie = new Map(averages.map((item) => [item.movieId, item]));
+        const loadedMovies = rawMovies.map((movie) => ({
+          ...movie,
+          averageRating: averageByMovie.get(movie.id)?.averageRating ?? 0,
+          ratingCount: averageByMovie.get(movie.id)?.ratingCount ?? 0,
+        }));
         if (!search) cachedMovies = loadedMovies;
         setMovies(loadedMovies);
         setFeaturedMovie(
@@ -405,7 +413,6 @@ function App() {
         <section className="movies-page">
           <div className="movies-heading">
             <div>
-              <p className="eyebrow">SMART CINEMA</p>
               <h1>
                 {page === "upcoming" ? "Coming soon to" : "Find your next"}
                 <br />
@@ -461,7 +468,7 @@ function App() {
                     {movie.genre} · {movie.durationMinutes} min
                   </p>
                   <h2>{movie.title}</h2>
-                  <span>{movie.ageRating}</span>
+                  <span>{movie.ratingCount ? `★ ${movie.averageRating.toFixed(1)} (${movie.ratingCount})` : "Not rated yet"} · {movie.ageRating}</span>
                 </div>
               </article>
             ))}
@@ -479,7 +486,7 @@ function App() {
                 {recommendedMovies.map((movie) => (
                   <article className="movie-card clickable-card" key={`recommended-${movie.id}`} onClick={() => { setSelectedMovie(movie); setPage("movie-details"); }}>
                     <img src={posterUrlFor(movie)} alt={`${movie.title} poster`} loading="lazy" />
-                    <div className="movie-info"><p>{movie.genre} · {movie.durationMinutes} min</p><h2>{movie.title}</h2><span>{movie.recommendationReason}</span></div>
+                    <div className="movie-info"><p>{movie.genre} · {movie.durationMinutes} min</p><h2>{movie.title}</h2><span>{movie.ratingCount ? `★ ${movie.averageRating.toFixed(1)} · ` : ""}{movie.recommendationReason}</span></div>
                   </article>
                 ))}
               </div>
@@ -497,7 +504,6 @@ function App() {
               />
             )}
             <div className="auth-copy-content">
-              <p className="eyebrow">NOW SHOWING AT SMART CINEMA</p>
               <h1>{featuredMovie?.title ?? "Every story starts here."}</h1>
               {featuredMovie ? (
                 <>
@@ -520,7 +526,6 @@ function App() {
             <button className="back-button" onClick={() => setPage("home")}>
               ← Back to movies
             </button>
-            <p className="eyebrow">WELCOME</p>
             <h2>
               {authMode === "register" ? "Create your account" : "Welcome back"}
             </h2>

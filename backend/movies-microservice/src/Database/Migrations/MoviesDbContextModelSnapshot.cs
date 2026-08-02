@@ -56,6 +56,10 @@ namespace Movies.Database.Migrations
             b.Property<string>("VerticalPosterBase64")
                 .HasColumnType("nvarchar(max)");
 
+            b.Property<string>("TrailerUrl")
+                .HasMaxLength(500)
+                .HasColumnType("nvarchar(500)");
+
                     b.Property<DateOnly>("PremiereDate")
                         .HasColumnType("date");
 

@@ -120,7 +120,6 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
     <section className="management-page reservation-management-page">
       <div className="management-heading">
         <div>
-          <p className="eyebrow">CINEMA MANAGER</p>
           <h1>Manage reservations</h1>
           <p>Review reserved seats and the customers who made each reservation.</p>
         </div>

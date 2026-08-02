@@ -40,5 +40,18 @@ export const validateMovieForm = (movie) => {
       "ageRating",
       "Age rating is required and can contain up to 30 characters.",
     );
+  if (movie.trailerUrl?.trim()) {
+    try {
+      const url = new URL(movie.trailerUrl.trim());
+      const host = url.hostname.replace(/^www\./, "");
+      if (
+        movie.trailerUrl.trim().length > 500 ||
+        !["youtube.com", "youtu.be", "youtube-nocookie.com"].includes(host)
+      )
+        throw new Error();
+    } catch {
+      addError(errors, "trailerUrl", "Enter a valid YouTube trailer URL.");
+    }
+  }
   return errors;
 };

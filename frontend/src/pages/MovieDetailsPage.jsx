@@ -10,6 +10,27 @@ const api = import.meta.env.VITE_API_GATEWAY_URL;
 const posterUrlFor = (movie, vertical = false) =>
   `${api}/api/movies/${movie.id}/poster${vertical ? "?vertical=true" : ""}`;
 
+const youtubeEmbedUrl = (value) => {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, "");
+    let videoId = null;
+    if (host === "youtu.be") videoId = url.pathname.split("/").filter(Boolean)[0];
+    if (host === "youtube.com" || host === "youtube-nocookie.com") {
+      videoId = url.searchParams.get("v") ??
+        (url.pathname.startsWith("/embed/") || url.pathname.startsWith("/shorts/")
+          ? url.pathname.split("/")[2]
+          : null);
+    }
+    return videoId
+      ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0`
+      : null;
+  } catch {
+    return null;
+  }
+};
+
 const formatDateTime = (value) =>
   new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
@@ -57,12 +78,22 @@ export default function MovieDetailsPage({
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [message, setMessage] = useState(null);
   const [rating, setRating] = useState(null);
+  const [ratingAverage, setRatingAverage] = useState({
+    averageRating: movie?.averageRating ?? 0,
+    ratingCount: movie?.ratingCount ?? 0,
+  });
   const [ratingState, setRatingState] = useState("hidden");
+  const [trailerOpen, setTrailerOpen] = useState(false);
 
   useEffect(() => {
     if (!movie?.id) return;
     const controller = new AbortController();
     setFullMovie(movie);
+    setTrailerOpen(false);
+    setRatingAverage({
+      averageRating: movie.averageRating ?? 0,
+      ratingCount: movie.ratingCount ?? 0,
+    });
 
     fetch(`${api}/api/movies/${movie.id}`, { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
@@ -100,7 +131,15 @@ export default function MovieDetailsPage({
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ movieId: movie.id, score }),
     });
-    if (response.ok) setRating(await response.json());
+    if (response.ok) {
+      setRating(await response.json());
+      const averagesResponse = await fetch(`${api}/api/ratings/averages`);
+      if (averagesResponse.ok) {
+        const averages = await averagesResponse.json();
+        const current = averages.find((item) => item.movieId === movie.id);
+        setRatingAverage(current ?? { averageRating: 0, ratingCount: 0 });
+      }
+    }
   };
 
   const loadReservedSeats = async (screeningId) => {
@@ -197,6 +236,7 @@ export default function MovieDetailsPage({
     fullMovie?.posterBase64 ??
     posterUrlFor(movie, true);
   const posterPosition = posterPositionFor(movie.title);
+  const trailerEmbedUrl = youtubeEmbedUrl(fullMovie?.trailerUrl ?? movie.trailerUrl);
 
   return (
     <section className="movie-details-page">
@@ -213,10 +253,14 @@ export default function MovieDetailsPage({
           />
         )}
         <div>
-          <p className="eyebrow">SMART CINEMA</p>
           <h1>{movie.title}</h1>
           <p className="movie-detail-meta">
             {movie.genre} · {movie.durationMinutes} min · {movie.ageRating}
+          </p>
+          <p className="movie-average-rating">
+            {ratingAverage.ratingCount
+              ? `★ ${ratingAverage.averageRating.toFixed(1)} from ${ratingAverage.ratingCount} rating${ratingAverage.ratingCount === 1 ? "" : "s"}`
+              : "Not rated yet"}
           </p>
           <p>{movie.description}</p>
           <p className="movie-detail-premiere">
@@ -235,6 +279,32 @@ export default function MovieDetailsPage({
           {token && ratingState === "unavailable" && <p className="profile-help">You can rate this movie after attending a screening.</p>}
         </div>
       </div>
+
+      {trailerEmbedUrl && (
+        <section className="trailer-section">
+          <div className="trailer-heading">
+            <div>
+              <h2>Official trailer</h2>
+              <p>Watch the trailer before choosing your screening.</p>
+            </div>
+            {!trailerOpen && (
+              <button className="submit-button" onClick={() => setTrailerOpen(true)}>
+                Watch trailer
+              </button>
+            )}
+          </div>
+          {trailerOpen && (
+            <div className="trailer-player">
+              <iframe
+                src={trailerEmbedUrl}
+                title={`${movie.title} official trailer`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="reservation-section">
         <div>

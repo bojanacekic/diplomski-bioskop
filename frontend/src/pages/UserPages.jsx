@@ -177,7 +177,6 @@ export function ProfilePage({ token, onBack }) {
     <section className="management-page profile-page">
       <div className="management-heading">
         <div>
-          <p className="eyebrow">MY ACCOUNT</p>
           <h1>My profile</h1>
         </div>
         <button className="header-link" onClick={onBack}>
@@ -791,10 +790,9 @@ export function UserManagementPage({ token, onBack }) {
     });
   };
   return (
-    <section className="management-page">
+    <section className="management-page user-management-page">
       <div className="management-heading">
         <div>
-          <p className="eyebrow">ADMINISTRATION</p>
           <h1>Manage users</h1>
         </div>
         <button className="header-link" onClick={onBack}>

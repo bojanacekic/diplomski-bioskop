@@ -17,6 +17,7 @@ public sealed class MoviesDbContext(DbContextOptions<MoviesDbContext> options) :
         movie.Property(x => x.Description).HasMaxLength(2000).IsRequired();
         movie.Property(x => x.Genre).HasMaxLength(100).IsRequired();
         movie.Property(x => x.AgeRating).HasMaxLength(30).IsRequired();
+        movie.Property(x => x.TrailerUrl).HasMaxLength(500);
         movie.Property(x => x.AverageRating).HasPrecision(3, 2);
         movie.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         movie.HasIndex(x => x.Title);

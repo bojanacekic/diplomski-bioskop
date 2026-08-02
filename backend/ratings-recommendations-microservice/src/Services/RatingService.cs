@@ -7,6 +7,7 @@ namespace RatingsRecommendations.Services;
 public sealed class RatingService(RatingsRecommendationsDbContext db, IHttpClientFactory httpClientFactory) : IRatingService
 {
  public async Task<IReadOnlyList<MovieRatingResponseDto>> GetMineAsync(Guid userId, CancellationToken token) => await db.MovieRatings.AsNoTracking().Where(x => x.UserId == userId).OrderByDescending(x => x.UpdatedAtUtc).Select(x => Map(x)).ToListAsync(token);
+ public async Task<IReadOnlyList<MovieRatingAverageResponseDto>> GetAveragesAsync(CancellationToken token) => await db.MovieRatings.AsNoTracking().GroupBy(x => x.MovieId).Select(group => new MovieRatingAverageResponseDto { MovieId = group.Key, AverageRating = group.Average(x => x.Score), RatingCount = group.Count() }).ToListAsync(token);
  public async Task<IReadOnlyList<MovieRecommendationResponseDto>> GetRecommendationsAsync(Guid userId, string authorizationHeader, CancellationToken token)
  {
   var client = httpClientFactory.CreateClient("Gateway");
