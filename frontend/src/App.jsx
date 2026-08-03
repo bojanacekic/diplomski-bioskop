@@ -262,8 +262,8 @@ function App() {
         <nav className="primary-nav" aria-label="Main navigation">
           <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>Home</button>
           <button className={page === "upcoming" ? "active" : ""} onClick={() => setPage("upcoming")}>Coming soon</button>
-          <button disabled title="Coming soon">About</button>
-          <button disabled title="Coming soon">Contact</button>
+          <button className={page === "about" ? "active" : ""} onClick={() => setPage("about")}>About</button>
+          <button className={page === "contact" ? "active" : ""} onClick={() => setPage("contact")}>Contact</button>
         </nav>
         <nav className="account-nav" aria-label="Account navigation">
           {session ? (
@@ -410,6 +410,32 @@ function App() {
           onBack={() => setPage("home")}
           onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)}
         />
+      ) : page === "about" ? (
+        <section className="info-page">
+          <div className="info-hero">
+            <h1>More than a movie.<br />A complete cinema experience.</h1>
+            <span>Smart Cinema combines great films, comfortable halls and simple digital booking in one modern experience.</span>
+          </div>
+          <div className="info-grid about-grid">
+            <article><h2>Our story</h2><p>Smart Cinema was created to make discovering films and booking tickets fast, clear and enjoyable for every guest.</p></article>
+            <article><h2>Our mission</h2><p>We bring audiences closer to the stories they love through quality screenings, carefully designed halls and reliable service.</p></article>
+            <article><h2>Smart experience</h2><p>Browse current and upcoming films, choose your seats, reserve or purchase tickets and access every ticket with its unique QR code.</p></article>
+          </div>
+          <div className="info-highlight"><strong>Smart Cinema</strong><p>Your next great story starts here.</p></div>
+        </section>
+      ) : page === "contact" ? (
+        <section className="info-page">
+          <div className="info-hero">
+            <h1>We are here<br />to help.</h1>
+            <span>Questions about screenings, reservations or tickets? Contact our team or ask the Smart Cinema AI assistant.</span>
+          </div>
+          <div className="info-grid contact-grid">
+            <article><span>EMAIL</span><h2>support@smartcinema.rs</h2><p>We usually reply within one business day.</p><a href="mailto:support@smartcinema.rs">Send an email</a></article>
+            <article><span>PHONE</span><h2>+381 21 555 0123</h2><p>Every day from 10:00 to 22:00.</p><a href="tel:+381215550123">Call us</a></article>
+            <article><span>VISIT US</span><h2>Трг Доситеја Обрадовића 6</h2><p>Нови Сад 21000, Serbia</p><a href="https://maps.google.com/?q=Trg+Dositeja+Obradovica+6+Novi+Sad+21000" target="_blank" rel="noreferrer">Open map</a></article>
+          </div>
+          <div className="info-highlight"><strong>Opening hours</strong><p>Monday–Sunday · 10:00–23:30</p></div>
+        </section>
       ) : page === "home" || page === "upcoming" ? (
         <section className="movies-page">
           <div className="movies-heading">
