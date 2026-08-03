@@ -11,6 +11,7 @@ $applications = @(
     @{ Name = "Ticket purchases microservice"; Path = "backend\ticket-purchases-microservice"; Command = "dotnet run --project src/WebAPI/TicketPurchases.WebAPI.csproj" },
     @{ Name = "Payments microservice"; Path = "backend\payments-microservice"; Command = "dotnet run --project src/WebAPI/Payments.WebAPI.csproj" },
     @{ Name = "Ratings and recommendations microservice"; Path = "backend\ratings-recommendations-microservice"; Command = "dotnet run --project src/WebAPI/RatingsRecommendations.WebAPI.csproj" },
+    @{ Name = "AI support microservice"; Path = "backend\ai-support-microservice"; Command = "dotnet run --project src/WebAPI/AiSupport.WebAPI.csproj" },
     @{ Name = "API Gateway"; Path = "backend\gateway-api"; Command = "dotnet run --project src/WebAPI/GatewayApi.WebAPI.csproj" },
     @{ Name = "React frontend"; Path = "frontend"; Command = "npm run dev" }
 )

@@ -44,6 +44,10 @@ var ratingsRecommendationsServiceBaseUrl =
     builder.Configuration["Services:RatingsRecommendationsBaseUrl"]
     ?? builder.Configuration["Services__RatingsRecommendationsBaseUrl"]
     ?? throw new InvalidOperationException("Services:RatingsRecommendationsBaseUrl is not configured.");
+var aiSupportServiceBaseUrl =
+    builder.Configuration["Services:AiSupportBaseUrl"]
+    ?? builder.Configuration["Services__AiSupportBaseUrl"]
+    ?? "http://localhost:5009";
 var allowedOrigin =
     builder.Configuration["Cors:AllowedOrigin"]
     ?? builder.Configuration["Cors__AllowedOrigin"]
@@ -126,6 +130,12 @@ builder
                 ClusterId = "ratings-cluster",
                 Match = new RouteMatch { Path = "/api/ratings/{**catch-all}" },
             },
+            new RouteConfig
+            {
+                RouteId = "ai-support-route",
+                ClusterId = "ai-support-cluster",
+                Match = new RouteMatch { Path = "/api/support/{**catch-all}" },
+            },
         ],
         [
             new ClusterConfig
@@ -207,6 +217,17 @@ builder
                     ["ratings-service"] = new()
                     {
                         Address = $"{ratingsRecommendationsServiceBaseUrl.TrimEnd('/')}/",
+                    },
+                },
+            },
+            new ClusterConfig
+            {
+                ClusterId = "ai-support-cluster",
+                Destinations = new Dictionary<string, DestinationConfig>
+                {
+                    ["ai-support-service"] = new()
+                    {
+                        Address = $"{aiSupportServiceBaseUrl.TrimEnd('/')}/",
                     },
                 },
             },
