@@ -1348,3 +1348,27 @@ form input:focus {
     font-size: 0.78rem;
   }
 }
+
+.ai-support { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; gap: .75rem; }
+.ai-chat-toggle { border: 0; border-radius: 999px; padding: .85rem 1.1rem; background: #b5121b; color: #fff; font: inherit; font-weight: 700; box-shadow: 0 12px 32px rgba(0,0,0,.28); cursor: pointer; }
+.ai-chat-toggle span { margin-right: .45rem; }
+.ai-chat-panel { width: min(370px, calc(100vw - 2rem)); height: min(560px, calc(100vh - 8rem)); display: grid; grid-template-rows: auto 1fr auto auto; overflow: hidden; border: 1px solid #d8d4ce; border-radius: 18px; background: #fff; color: #171717; box-shadow: 0 20px 55px rgba(0,0,0,.3); }
+.ai-chat-panel > header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.1rem; background: #111; color: #fff; }
+.ai-chat-panel header div { display: flex; flex-direction: column; gap: .15rem; }
+.ai-chat-panel header span { color: #bbb; font-size: .75rem; }
+.ai-chat-panel header button { border: 0; background: transparent; color: #fff; font-size: 1.7rem; cursor: pointer; }
+.ai-chat-messages { overflow-y: auto; padding: 1rem; background: #f5f3ef; }
+.ai-message { width: fit-content; max-width: 86%; margin: 0 0 .7rem; padding: .7rem .85rem; border-radius: 14px 14px 14px 3px; background: #fff; font-size: .9rem; line-height: 1.45; white-space: pre-wrap; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.ai-message.user { margin-left: auto; border-radius: 14px 14px 3px 14px; background: #171717; color: #fff; }
+.ai-message.error { background: #fde8e8; color: #8e1118; }
+.ai-message.typing { color: #666; }
+.ai-chat-panel form { display: flex; gap: .5rem; padding: .8rem; border-top: 1px solid #ddd; }
+.ai-chat-panel form input { min-width: 0; flex: 1; border: 1px solid #cbc7c1; border-radius: 999px; padding: .7rem .85rem; font: inherit; }
+.ai-chat-panel form button { border: 0; border-radius: 999px; padding: .7rem .9rem; background: #b5121b; color: #fff; font-weight: 700; cursor: pointer; }
+.ai-chat-panel form button:disabled { opacity: .5; cursor: default; }
+.ai-chat-panel > small { padding: 0 .9rem .65rem; color: #777; text-align: center; font-size: .68rem; }
+
+@media (max-width: 600px) {
+  .ai-support { right: .75rem; bottom: .75rem; }
+  .ai-chat-panel { width: calc(100vw - 1.5rem); height: min(520px, calc(100vh - 6.5rem)); }
+}

@@ -6,6 +6,7 @@ import toyStoryPoster from "./assets/toy-story-vertical.jpg";
 import spiderManPoster from "./assets/spider-man-vertical.jpg";
 import endOfOakStreetPoster from "./assets/end-of-oak-street-vertical.jpg";
 import pawPatrolDinoPoster from "./assets/paw-patrol-dino-vertical.jpg";
+import AiSupportChat from "./components/AiSupportChat";
 const MovieManagementPage = lazy(() => import("./pages/MovieManagementPage"));
 const HallManagementPage = lazy(() => import("./pages/HallManagementPage"));
 const HallLayoutPage = lazy(() => import("./pages/HallLayoutPage"));
@@ -259,10 +260,10 @@ function App() {
           <span className="logo-text">Smart Cinema</span>
         </button>
         <nav className="primary-nav" aria-label="Main navigation">
-          <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>Naslovna</button>
-          <button className={page === "upcoming" ? "active" : ""} onClick={() => setPage("upcoming")}>Uskoro</button>
-          <button disabled title="U pripremi">O nama</button>
-          <button disabled title="U pripremi">Kontakt</button>
+          <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>Home</button>
+          <button className={page === "upcoming" ? "active" : ""} onClick={() => setPage("upcoming")}>Coming soon</button>
+          <button disabled title="Coming soon">About</button>
+          <button disabled title="Coming soon">Contact</button>
         </nav>
         <nav className="account-nav" aria-label="Account navigation">
           {session ? (
@@ -594,6 +595,7 @@ function App() {
         </section>
       )}
       </Suspense>
+      {apiUrl && <AiSupportChat apiUrl={apiUrl} />}
     </main>
   );
 }
