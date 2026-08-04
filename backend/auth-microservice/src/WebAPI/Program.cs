@@ -29,6 +29,8 @@ if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey) || jwtSettings.SecretKey.Le
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
 builder.Services.AddDbContext<AuthDbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
