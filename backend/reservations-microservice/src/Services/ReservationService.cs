@@ -3,10 +3,17 @@ using Reservations.Database;
 using Reservations.Domain;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net;
+using Microsoft.Extensions.Logging;
 
 namespace Reservations.Services;
 
-public sealed class ReservationService(ReservationsDbContext db, IHttpClientFactory httpClientFactory)
+public sealed class ReservationService(
+    ReservationsDbContext db,
+    IHttpClientFactory httpClientFactory,
+    IEmailSender emailSender,
+    ILogger<ReservationService> logger
+)
     : IReservationService
 {
     public async Task<IReadOnlyList<ReservationResponseDto>> GetForUserAsync(
@@ -69,6 +76,7 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
 
     public async Task<IReadOnlyList<ReservationResponseDto>> CreateAsync(
         Guid userId,
+        string userEmail,
         CreateReservationRequestDto request,
         CancellationToken token
     )
@@ -114,6 +122,31 @@ public sealed class ReservationService(ReservationsDbContext db, IHttpClientFact
         catch (DbUpdateException)
         {
             throw new InvalidOperationException("One or more selected seats are already reserved.");
+        }
+
+        try
+        {
+            var seats = WebUtility.HtmlEncode(string.Join(", ", seatLabels));
+            var bookingReference = $"SC-{reservationGroupId:N}"[..11].ToUpperInvariant();
+            await emailSender.SendAsync(
+                userEmail,
+                "Smart Cinema reservation confirmed",
+                $"""
+                <p>Your Smart Cinema reservation was created successfully.</p>
+                <p><strong>Seats:</strong> {seats}</p>
+                <p><strong>Booking reference:</strong> {bookingReference}</p>
+                <p>You can review and manage the reservation under <strong>My reservations</strong>.</p>
+                """,
+                token
+            );
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogError(
+                exception,
+                "Reservation {ReservationGroupId} was created, but its confirmation email could not be sent.",
+                reservationGroupId
+            );
         }
         return reservations.Select(Map).ToList();
     }

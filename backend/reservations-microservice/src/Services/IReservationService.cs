@@ -7,7 +7,12 @@ public interface IReservationService
     Task<IReadOnlyList<ReservationResponseDto>> GetForUserAsync(Guid userId, CancellationToken token);
     Task<IReadOnlyList<ReservationResponseDto>> GetAllAsync(Guid? screeningId, CancellationToken token);
     Task<IReadOnlyList<ReservedSeatResponseDto>> GetReservedSeatsAsync(Guid screeningId, Guid? userId, CancellationToken token);
-    Task<IReadOnlyList<ReservationResponseDto>> CreateAsync(Guid userId, CreateReservationRequestDto request, CancellationToken token);
+    Task<IReadOnlyList<ReservationResponseDto>> CreateAsync(
+        Guid userId,
+        string userEmail,
+        CreateReservationRequestDto request,
+        CancellationToken token
+    );
     Task<IReadOnlyList<ReservationResponseDto>> RequestCashPaymentAsync(
         Guid id,
         Guid userId,
