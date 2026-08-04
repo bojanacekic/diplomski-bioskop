@@ -54,6 +54,13 @@ namespace AuthMicroservice.Database.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<DateTime?>("PasswordResetTokenExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PasswordResetTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(30)
