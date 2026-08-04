@@ -107,6 +107,59 @@ function App() {
     }
   }, [resetToken]);
 
+  useEffect(() => {
+    if (!apiUrl) return undefined;
+    let active = true;
+
+    const checkGatewayInstance = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/health`, { cache: "no-store" });
+        if (!response.ok || !active) return;
+        const { instanceId } = await response.json();
+        if (!instanceId) return;
+
+        const previousInstanceId = sessionStorage.getItem("smartCinemaGatewayInstance");
+        if (previousInstanceId && previousInstanceId !== instanceId) {
+          sessionStorage.removeItem("smartCinemaSession");
+          setSession(null);
+          setAccountMenuOpen(false);
+          setRecommendations([]);
+          setPage("home");
+        }
+        sessionStorage.setItem("smartCinemaGatewayInstance", instanceId);
+      } catch {
+        // A temporary outage is not a logout; a new instance is detected when it returns.
+      }
+    };
+
+    checkGatewayInstance();
+    const interval = window.setInterval(checkGatewayInstance, 5000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session?.expiresAtUtc) return undefined;
+    const remainingMilliseconds = new Date(session.expiresAtUtc).getTime() - Date.now();
+    if (remainingMilliseconds <= 0) {
+      sessionStorage.removeItem("smartCinemaSession");
+      setSession(null);
+      setPage("home");
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => {
+      sessionStorage.removeItem("smartCinemaSession");
+      setSession(null);
+      setAccountMenuOpen(false);
+      setRecommendations([]);
+      setPage("home");
+    }, remainingMilliseconds);
+    return () => window.clearTimeout(timeout);
+  }, [session?.expiresAtUtc]);
+
   const chooseFeaturedMovie = (availableMovies = movies) => {
     if (availableMovies.length > 0) {
       setFeaturedMovie(

@@ -235,6 +235,7 @@ builder
     );
 
 var app = builder.Build();
+var instanceId = Guid.NewGuid();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseCors("Frontend");
@@ -242,7 +243,12 @@ app.MapGet(
     "/health",
     () =>
         TypedResults.Ok(
-            new GatewayHealthResponseDto { Status = "Healthy", CheckedAtUtc = DateTime.UtcNow }
+            new GatewayHealthResponseDto
+            {
+                Status = "Healthy",
+                InstanceId = instanceId,
+                CheckedAtUtc = DateTime.UtcNow,
+            }
         )
 );
 app.MapReverseProxy();
