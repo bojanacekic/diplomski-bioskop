@@ -47,6 +47,41 @@ const loadRecommendations = (accessToken) => {
 const emptyRegister = { username: "", email: "", firstName: "", lastName: "", password: "" };
 const emptyLogin = { usernameOrEmail: "", password: "" };
 const emptyReset = { newPassword: "", confirmPassword: "" };
+const staticRoutes = {
+  "/": "home",
+  "/coming-soon": "upcoming",
+  "/about": "about",
+  "/contact": "contact",
+  "/auth": "auth",
+  "/profile": "profile",
+  "/management/movies": "manage",
+  "/management/halls": "halls",
+  "/management/screenings": "screenings",
+  "/management/reservations": "reservations",
+  "/management/ticket-validation": "ticket-validation",
+  "/management/users": "users",
+};
+const pathForPage = (page, id = null) => {
+  if (page === "movie-details") return `/movies/${id}`;
+  if (page === "hall-layout") return `/management/halls/${id}/layout`;
+  if (page === "profile") return id && id !== "details" ? `/profile/${id}` : "/profile";
+  return Object.entries(staticRoutes).find(([, routePage]) => routePage === page)?.[0] ?? "/";
+};
+const routeFromLocation = () => {
+  const profileMatch = window.location.pathname.match(
+    /^\/profile(?:\/(security|reservations|tickets))?$/,
+  );
+  if (profileMatch) return { page: "profile", profileTab: profileMatch[1] ?? "details" };
+  const movieMatch = window.location.pathname.match(/^\/movies\/([^/]+)$/);
+  if (movieMatch)
+    return { page: "movie-details", movieId: decodeURIComponent(movieMatch[1]) };
+  const hallMatch = window.location.pathname.match(
+    /^\/management\/halls\/([^/]+)\/layout$/,
+  );
+  if (hallMatch)
+    return { page: "hall-layout", hallId: decodeURIComponent(hallMatch[1]) };
+  return { page: staticRoutes[window.location.pathname] ?? "home" };
+};
 const verticalPosterFor = (title = "") => {
   const normalizedTitle = title.toLowerCase();
   if (normalizedTitle.includes("odyssey") || normalizedTitle.includes("odiseja")) return odysseyPoster;
@@ -59,7 +94,8 @@ const verticalPosterFor = (title = "") => {
 };
 
 function App() {
-  const [page, setPage] = useState("home");
+  const initialRoute = useRef(routeFromLocation()).current;
+  const [page, setPage] = useState(initialRoute.page);
   const [authMode, setAuthMode] = useState("login");
   const [movies, setMovies] = useState(() => cachedMovies ?? []);
   const [moviesRefreshKey, setMoviesRefreshKey] = useState(0);
@@ -81,8 +117,11 @@ function App() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
   const [selectedHall, setSelectedHall] = useState(null);
+  const [selectedHallId, setSelectedHallId] = useState(initialRoute.hallId ?? null);
   const [selectedMovie, setSelectedMovie] = useState(null);
+  const [selectedMovieId, setSelectedMovieId] = useState(initialRoute.movieId ?? null);
   const [postAuthPage, setPostAuthPage] = useState(null);
+  const [profileTab, setProfileTab] = useState(initialRoute.profileTab ?? "details");
   const [session, setSession] = useState(() =>
     JSON.parse(sessionStorage.getItem("smartCinemaSession") || "null"),
   );
@@ -99,6 +138,95 @@ function App() {
   const catalogMovies = movies.filter((movie) =>
     page === "upcoming" ? movie.status === 0 : movie.status === 1,
   );
+
+  const navigate = (nextPage, item = null, { replace = false } = {}) => {
+    const id = typeof item === "string" ? item : item?.id ?? null;
+    const path = pathForPage(nextPage, id);
+    const historyMethod = replace || window.location.pathname === path
+      ? "replaceState"
+      : "pushState";
+    window.history[historyMethod]({}, "", path);
+    if (nextPage === "movie-details") {
+      setSelectedMovie(item);
+      setSelectedMovieId(id);
+    }
+    if (nextPage === "hall-layout") {
+      setSelectedHall(item);
+      setSelectedHallId(id);
+    }
+    if (nextPage === "profile") setProfileTab(id ?? "details");
+    setPage(nextPage);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = routeFromLocation();
+      setSelectedMovieId(route.movieId ?? null);
+      setSelectedHallId(route.hallId ?? null);
+      setProfileTab(route.profileTab ?? "details");
+      if (route.page !== "movie-details") setSelectedMovie(null);
+      if (route.page !== "hall-layout") setSelectedHall(null);
+      setPage(route.page);
+      setAccountMenuOpen(false);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (page !== "movie-details" || !selectedMovieId || selectedMovie) return undefined;
+    const cachedMovie = movies.find((item) => item.id === selectedMovieId);
+    if (cachedMovie) {
+      setSelectedMovie(cachedMovie);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    fetch(`${apiUrl}/api/movies/${encodeURIComponent(selectedMovieId)}`, {
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then(setSelectedMovie)
+      .catch((error) => {
+        if (error?.name !== "AbortError") navigate("home", null, { replace: true });
+      });
+    return () => controller.abort();
+  }, [movies, page, selectedMovie, selectedMovieId]);
+
+  useEffect(() => {
+    if (page !== "hall-layout" || !selectedHallId || selectedHall) return undefined;
+    const controller = new AbortController();
+    fetch(`${apiUrl}/api/halls/${encodeURIComponent(selectedHallId)}`, {
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then(setSelectedHall)
+      .catch((error) => {
+        if (error?.name !== "AbortError") navigate("halls", null, { replace: true });
+      });
+    return () => controller.abort();
+  }, [page, selectedHall, selectedHallId]);
+
+  useEffect(() => {
+    const accountPages = ["profile"];
+    const managementPages = [
+      "manage",
+      "halls",
+      "hall-layout",
+      "screenings",
+      "reservations",
+      "ticket-validation",
+    ];
+    if (accountPages.includes(page) && !session) {
+      setPostAuthPage(page);
+      navigate("auth", null, { replace: true });
+    } else if (managementPages.includes(page) && !(isCinemaManager || isAdministrator)) {
+      navigate(session ? "home" : "auth", null, { replace: true });
+    } else if (page === "users" && !isAdministrator) {
+      navigate(session ? "home" : "auth", null, { replace: true });
+    }
+  }, [page, session, isCinemaManager, isAdministrator]);
 
   useEffect(() => {
     if (resetToken) {
@@ -124,7 +252,7 @@ function App() {
           setSession(null);
           setAccountMenuOpen(false);
           setRecommendations([]);
-          setPage("home");
+          navigate("home", null, { replace: true });
         }
         sessionStorage.setItem("smartCinemaGatewayInstance", instanceId);
       } catch {
@@ -146,7 +274,7 @@ function App() {
     if (remainingMilliseconds <= 0) {
       sessionStorage.removeItem("smartCinemaSession");
       setSession(null);
-      setPage("home");
+      navigate("home", null, { replace: true });
       return undefined;
     }
 
@@ -155,7 +283,7 @@ function App() {
       setSession(null);
       setAccountMenuOpen(false);
       setRecommendations([]);
-      setPage("home");
+      navigate("home", null, { replace: true });
     }, remainingMilliseconds);
     return () => window.clearTimeout(timeout);
   }, [session?.expiresAtUtc]);
@@ -297,7 +425,7 @@ function App() {
       setAccountMenuOpen(false);
       setRegisterForm(emptyRegister);
       setLoginForm(emptyLogin);
-      setPage(postAuthPage ?? "home");
+      navigate(postAuthPage ?? "home", postAuthPage === "movie-details" ? selectedMovie : null);
       setPostAuthPage(null);
     } catch (error) {
       setMessage({ type: "error", text: error.message });
@@ -358,7 +486,7 @@ function App() {
     sessionStorage.removeItem("smartCinemaSession");
     setSession(null);
     setAccountMenuOpen(false);
-    setPage("home");
+    navigate("home", null, { replace: true });
   };
 
   const goAuth = (mode, returnPage = null) => {
@@ -366,23 +494,23 @@ function App() {
     setAuthMode(mode);
     setMessage(null);
     setPostAuthPage(returnPage);
-    setPage("auth");
+    navigate("auth");
   };
 
   return (
     <main className="site-shell">
       <header className="topbar">
-        <button className="logo" onClick={() => setPage("home")}>
+        <button className="logo" onClick={() => navigate("home")}>
           <span className="logo-mark">
             <img src={lightLogo} alt="Smart Cinema" />
           </span>
           <span className="logo-text">Smart Cinema</span>
         </button>
         <nav className="primary-nav" aria-label="Main navigation">
-          <button className={page === "home" ? "active" : ""} onClick={() => setPage("home")}>Home</button>
-          <button className={page === "upcoming" ? "active" : ""} onClick={() => setPage("upcoming")}>Coming soon</button>
-          <button className={page === "about" ? "active" : ""} onClick={() => setPage("about")}>About</button>
-          <button className={page === "contact" ? "active" : ""} onClick={() => setPage("contact")}>Contact</button>
+          <button className={page === "home" ? "active" : ""} onClick={() => navigate("home")}>Home</button>
+          <button className={page === "upcoming" ? "active" : ""} onClick={() => navigate("upcoming")}>Coming soon</button>
+          <button className={page === "about" ? "active" : ""} onClick={() => navigate("about")}>About</button>
+          <button className={page === "contact" ? "active" : ""} onClick={() => navigate("contact")}>Contact</button>
         </nav>
         <nav className="account-nav" aria-label="Account navigation">
           {session ? (
@@ -398,7 +526,7 @@ function App() {
                   <span className="menu-section-label">Account</span>
                   <button
                     onClick={() => {
-                      setPage("profile");
+                      navigate("profile");
                       setAccountMenuOpen(false);
                     }}
                   >
@@ -409,7 +537,7 @@ function App() {
                       <span className="menu-section-label">Cinema</span>
                       <button
                         onClick={() => {
-                          setPage("manage");
+                          navigate("manage");
                           setAccountMenuOpen(false);
                         }}
                       >
@@ -417,7 +545,7 @@ function App() {
                       </button>
                       <button
                         onClick={() => {
-                          setPage("halls");
+                          navigate("halls");
                           setAccountMenuOpen(false);
                         }}
                       >
@@ -425,7 +553,7 @@ function App() {
                       </button>
                       <button
                         onClick={() => {
-                          setPage("screenings");
+                          navigate("screenings");
                           setAccountMenuOpen(false);
                         }}
                       >
@@ -434,7 +562,7 @@ function App() {
                       <span className="menu-section-label">Operations</span>
                       <button
                         onClick={() => {
-                          setPage("reservations");
+                          navigate("reservations");
                           setAccountMenuOpen(false);
                         }}
                       >
@@ -442,7 +570,7 @@ function App() {
                       </button>
                       <button
                         onClick={() => {
-                          setPage("ticket-validation");
+                          navigate("ticket-validation");
                           setAccountMenuOpen(false);
                         }}
                       >
@@ -455,7 +583,7 @@ function App() {
                       <span className="menu-section-label">Administration</span>
                       <button
                         onClick={() => {
-                          setPage("users");
+                          navigate("users");
                           setAccountMenuOpen(false);
                         }}
                       >
@@ -486,47 +614,52 @@ function App() {
       {page === "profile" ? (
         <ProfilePage
           token={session?.accessToken}
-          onBack={() => setPage("home")}
+          activeTab={profileTab}
+          onTabChange={(tab) => navigate("profile", tab)}
+          onBack={() => navigate("home")}
         />
-      ) : page === "movie-details" ? (
+      ) : page === "movie-details" && selectedMovie ? (
         <MovieDetailsPage
           movie={selectedMovie}
           token={session?.accessToken}
-          onBack={() => setPage("home")}
+          onBack={() => navigate("home")}
           onSignIn={() => goAuth("login", "movie-details")}
         />
+      ) : page === "movie-details" ? (
+        <p className="state-message">Loading movie...</p>
       ) : page === "users" ? (
         <UserManagementPage
           token={session?.accessToken}
-          onBack={() => setPage("home")}
+          onBack={() => navigate("home")}
         />
       ) : page === "screenings" ? (
-        <ScreeningManagementPage accessToken={session?.accessToken} onBack={() => setPage("home")} />
+        <ScreeningManagementPage accessToken={session?.accessToken} onBack={() => navigate("home")} />
       ) : page === "reservations" ? (
         <ReservationManagementPage
           accessToken={session?.accessToken}
-          onBack={() => setPage("home")}
+          onBack={() => navigate("home")}
         />
       ) : page === "ticket-validation" ? (
         <TicketValidationPage
           accessToken={session?.accessToken}
-          onBack={() => setPage("home")}
+          onBack={() => navigate("home")}
         />
+      ) : page === "hall-layout" && selectedHall ? (
+        <HallLayoutPage hall={selectedHall} onBack={() => navigate("halls")} />
       ) : page === "hall-layout" ? (
-        <HallLayoutPage hall={selectedHall} onBack={() => setPage("halls")} />
+        <p className="state-message">Loading hall...</p>
       ) : page === "halls" ? (
         <HallManagementPage
           accessToken={session?.accessToken}
-          onBack={() => setPage("home")}
+          onBack={() => navigate("home")}
           onViewLayout={(hall) => {
-            setSelectedHall(hall);
-            setPage("hall-layout");
+            navigate("hall-layout", hall);
           }}
         />
       ) : page === "manage" ? (
         <MovieManagementPage
           accessToken={session?.accessToken}
-          onBack={() => setPage("home")}
+          onBack={() => navigate("home")}
           onMoviesChanged={() => setMoviesRefreshKey((value) => value + 1)}
         />
       ) : page === "about" ? (
@@ -600,8 +733,7 @@ function App() {
                 className="movie-card clickable-card"
                 key={movie.id}
                 onClick={() => {
-                  setSelectedMovie(movie);
-                  setPage("movie-details");
+                  navigate("movie-details", movie);
                 }}
               >
                 <img
@@ -630,7 +762,7 @@ function App() {
               </div>
               <div className="movie-grid recommendations-grid">
                 {recommendedMovies.map((movie) => (
-                  <article className="movie-card clickable-card" key={`recommended-${movie.id}`} onClick={() => { setSelectedMovie(movie); setPage("movie-details"); }}>
+                  <article className="movie-card clickable-card" key={`recommended-${movie.id}`} onClick={() => navigate("movie-details", movie)}>
                     <img src={posterUrlFor(movie)} alt={`${movie.title} poster`} loading="lazy" />
                     <div className="movie-info"><p>{movie.genre} · {movie.durationMinutes} min</p><h2>{movie.title}</h2><span>{movie.ratingCount ? `★ ${movie.averageRating.toFixed(1)} · ` : ""}{movie.recommendationReason}</span></div>
                   </article>
@@ -669,7 +801,7 @@ function App() {
             </div>
           </div>
           <div className="auth-card">
-            <button className="back-button" onClick={() => setPage("home")}>
+            <button className="back-button" onClick={() => navigate("home")}>
               ← Back to movies
             </button>
             <h2>

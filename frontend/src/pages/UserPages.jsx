@@ -9,7 +9,7 @@ const headers = (token) => ({
   Authorization: `Bearer ${token}`,
 });
 
-export function ProfilePage({ token, onBack }) {
+export function ProfilePage({ token, activeTab = "details", onTabChange, onBack }) {
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -25,7 +25,6 @@ export function ProfilePage({ token, onBack }) {
   });
   const [passwordMessage, setPasswordMessage] = useState(null);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState("details");
   const [profileMinHeight, setProfileMinHeight] = useState(null);
   const restoreScrollPosition = useRef(null);
   const changeProfileTab = (tab) => {
@@ -36,7 +35,7 @@ export function ProfilePage({ token, onBack }) {
         window.scrollY + window.innerHeight,
       ),
     );
-    setActiveTab(tab);
+    onTabChange?.(tab);
   };
   useLayoutEffect(() => {
     if (restoreScrollPosition.current === null)
