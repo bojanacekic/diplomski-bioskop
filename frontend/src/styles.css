@@ -502,6 +502,17 @@ form input:focus {
   box-sizing: border-box;
   white-space: nowrap;
 }
+.auth-text-button {
+  width: 100%;
+  margin-top: 0.85rem;
+  border: 0;
+  background: transparent;
+  color: #a50f18;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .management-heading .management-back-button {
   position: absolute;
   top: 61px;

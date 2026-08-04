@@ -46,6 +46,7 @@ const loadRecommendations = (accessToken) => {
 };
 const emptyRegister = { username: "", email: "", firstName: "", lastName: "", password: "" };
 const emptyLogin = { usernameOrEmail: "", password: "" };
+const emptyReset = { newPassword: "", confirmPassword: "" };
 const verticalPosterFor = (title = "") => {
   const normalizedTitle = title.toLowerCase();
   if (normalizedTitle.includes("odyssey") || normalizedTitle.includes("odiseja")) return odysseyPoster;
@@ -70,6 +71,11 @@ function App() {
   const [search, setSearch] = useState("");
   const [registerForm, setRegisterForm] = useState(emptyRegister);
   const [loginForm, setLoginForm] = useState(emptyLogin);
+  const [loginFailures, setLoginFailures] = useState(0);
+  const [resetForm, setResetForm] = useState(emptyReset);
+  const [resetToken] = useState(
+    () => new URLSearchParams(window.location.search).get("resetToken") ?? "",
+  );
   const [message, setMessage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
@@ -93,6 +99,13 @@ function App() {
   const catalogMovies = movies.filter((movie) =>
     page === "upcoming" ? movie.status === 0 : movie.status === 1,
   );
+
+  useEffect(() => {
+    if (resetToken) {
+      setAuthMode("reset");
+      setPage("auth");
+    }
+  }, [resetToken]);
 
   const chooseFeaturedMovie = (availableMovies = movies) => {
     if (availableMovies.length > 0) {
@@ -219,8 +232,13 @@ function App() {
         },
       );
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(errorText(payload));
+      if (!response.ok) {
+        if (!registering && response.status === 401)
+          setLoginFailures((failures) => failures + 1);
+        throw new Error(errorText(payload));
+      }
 
+      setLoginFailures(0);
       sessionStorage.setItem("smartCinemaSession", JSON.stringify(payload));
       setSession(payload);
       setAccountMenuOpen(false);
@@ -228,6 +246,54 @@ function App() {
       setLoginForm(emptyLogin);
       setPage(postAuthPage ?? "home");
       setPostAuthPage(null);
+    } catch (error) {
+      setMessage({ type: "error", text: error.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const requestPasswordReset = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`${apiUrl}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usernameOrEmail: loginForm.usernameOrEmail }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(errorText(payload));
+      setMessage({ type: "success", text: payload.message });
+    } catch (error) {
+      setMessage({ type: "error", text: error.message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetPassword = async (event) => {
+    event.preventDefault();
+    setMessage(null);
+    if (resetForm.newPassword !== resetForm.confirmPassword)
+      return setMessage({ type: "error", text: "Passwords do not match." });
+
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${apiUrl}/api/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: resetToken, newPassword: resetForm.newPassword }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(errorText(payload));
+      }
+      window.history.replaceState({}, "", window.location.pathname);
+      setResetForm(emptyReset);
+      setAuthMode("login");
+      setMessage({ type: "success", text: "Password changed. You can now sign in." });
     } catch (error) {
       setMessage({ type: "error", text: error.message });
     } finally {
@@ -554,9 +620,15 @@ function App() {
               ← Back to movies
             </button>
             <h2>
-              {authMode === "register" ? "Create your account" : "Welcome back"}
+              {authMode === "register"
+                ? "Create your account"
+                : authMode === "forgot"
+                  ? "Reset your password"
+                  : authMode === "reset"
+                    ? "Choose a new password"
+                    : "Welcome back"}
             </h2>
-            <div className="mode-switch">
+            {(authMode === "login" || authMode === "register") && <div className="mode-switch">
               <button
                 className={authMode === "register" ? "active" : ""}
                 onClick={() => setAuthMode("register")}
@@ -569,8 +641,8 @@ function App() {
               >
                 Sign in
               </button>
-            </div>
-            <form onSubmit={submitAuth}>
+            </div>}
+            {(authMode === "login" || authMode === "register") && <form onSubmit={submitAuth}>
               {authMode === "register" && (
                 <><div className="auth-name-row"><label>First name<input name="firstName" value={registerForm.firstName} onChange={changeForm(setRegisterForm)} required /></label><label>Last name<input name="lastName" value={registerForm.lastName} onChange={changeForm(setRegisterForm)} required /></label></div><label>Username<input name="username" value={registerForm.username} onChange={changeForm(setRegisterForm)} required /></label></>
               )}
@@ -616,7 +688,81 @@ function App() {
                     ? "Create account"
                     : "Sign in"}
               </button>
-            </form>
+              {authMode === "login" && loginFailures >= 3 && (
+                <button
+                  className="auth-text-button"
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("forgot");
+                    setMessage(null);
+                  }}
+                >
+                  Forgot password?
+                </button>
+              )}
+            </form>}
+            {authMode === "forgot" && (
+              <form onSubmit={requestPasswordReset}>
+                <p className="profile-help">
+                  Enter the username or email address connected to your account.
+                </p>
+                <label>
+                  Username or email
+                  <input
+                    name="usernameOrEmail"
+                    value={loginForm.usernameOrEmail}
+                    onChange={changeForm(setLoginForm)}
+                    required
+                  />
+                </label>
+                {message && <p className={`form-message ${message.type}`}>{message.text}</p>}
+                <button className="submit-button" disabled={submitting}>
+                  {submitting ? "Sending..." : "Send reset link"}
+                </button>
+                <button
+                  className="auth-text-button"
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setMessage(null);
+                  }}
+                >
+                  Back to sign in
+                </button>
+              </form>
+            )}
+            {authMode === "reset" && (
+              <form onSubmit={resetPassword}>
+                <label>
+                  New password
+                  <input
+                    name="newPassword"
+                    type="password"
+                    value={resetForm.newPassword}
+                    onChange={changeForm(setResetForm)}
+                    maxLength={100}
+                    autoComplete="new-password"
+                    required
+                  />
+                </label>
+                <label>
+                  Confirm new password
+                  <input
+                    name="confirmPassword"
+                    type="password"
+                    value={resetForm.confirmPassword}
+                    onChange={changeForm(setResetForm)}
+                    maxLength={100}
+                    autoComplete="new-password"
+                    required
+                  />
+                </label>
+                {message && <p className={`form-message ${message.type}`}>{message.text}</p>}
+                <button className="submit-button" disabled={submitting}>
+                  {submitting ? "Changing..." : "Change password"}
+                </button>
+              </form>
+            )}
           </div>
         </section>
       )}
