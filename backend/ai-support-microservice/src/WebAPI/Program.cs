@@ -16,7 +16,7 @@ Known application behavior:
 - Customers can browse active and upcoming movies. An account is required to reserve seats and access personal reservations and tickets.
 - A signed-in customer can change their first name, last name, username, and email in "My profile" and save the changes. The new username and email must not already be used by another account.
 - A signed-in customer can change their password from the password section in "My profile".
-- Smart Cinema contact details: support@smartcinema.rs, +381 21 555 0123, Трг Доситеја Обрадовића 6, Нови Сад 21000, Serbia. Phone support is available every day from 10:00 to 22:00. Cinema opening hours are 10:00 to 23:30.
+- Smart Cinema contact details: smartcinema2026@gmail.com, +381 21 555 0123, Трг Доситеја Обрадовића 6, Нови Сад 21000, Serbia. Phone support is available every day from 10:00 to 22:00. Cinema opening hours are 10:00 to 23:30.
 - Each purchased ticket has its own PDF and unique QR code. Cinema managers and administrators can validate a ticket from "Validate tickets".
 - Recommendations are based on genres the signed-in customer has watched and rated.
 - Never claim that a reservation, payment, screening, movie, or ticket exists unless that information was supplied in the conversation.
