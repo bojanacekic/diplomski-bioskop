@@ -19,6 +19,8 @@ var connection = builder.Configuration.GetConnectionString("RatingsRecommendatio
 var issuer = builder.Configuration["Jwt:Issuer"] ?? throw new InvalidOperationException("Jwt issuer is not configured.");
 var audience = builder.Configuration["Jwt:Audience"] ?? throw new InvalidOperationException("Jwt audience is not configured.");
 var secret = builder.Configuration["Jwt:SecretKey"] ?? throw new InvalidOperationException("Jwt secret is not configured.");
+if (secret.Length < 32)
+    throw new InvalidOperationException("Jwt:SecretKey must contain at least 32 characters.");
 builder.WebHost.UseUrls(builder.Configuration["RatingsRecommendations:Url"] ?? "http://localhost:5008");
 builder.Services.AddDbContext<RatingsRecommendationsDbContext>(x => x.UseSqlServer(connection));
 builder.Services.AddScoped<IRatingService, RatingService>();

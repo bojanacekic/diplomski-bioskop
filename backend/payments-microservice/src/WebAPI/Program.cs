@@ -54,6 +54,8 @@ var jwtSecret =
     builder.Configuration["Jwt:SecretKey"]
     ?? builder.Configuration["Jwt__SecretKey"]
     ?? throw new InvalidOperationException("Jwt:SecretKey is not configured.");
+if (jwtSecret.Length < 32)
+    throw new InvalidOperationException("Jwt:SecretKey must contain at least 32 characters.");
 
 builder.WebHost.UseUrls(paymentsUrl);
 builder.Services.AddDbContext<PaymentsDbContext>(options => options.UseSqlServer(connectionString));

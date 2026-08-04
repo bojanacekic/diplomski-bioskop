@@ -18,6 +18,8 @@ builder.WebHost.UseUrls(builder.Configuration["Halls:Url"] ?? "http://localhost:
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? builder.Configuration["Jwt__Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? builder.Configuration["Jwt__Audience"] ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? builder.Configuration["Jwt__SecretKey"] ?? throw new InvalidOperationException("Jwt:SecretKey is not configured.");
+if (jwtSecretKey.Length < 32)
+    throw new InvalidOperationException("Jwt:SecretKey must contain at least 32 characters.");
 var screeningsServiceBaseUrl = builder.Configuration["Services:ScreeningsBaseUrl"] ?? builder.Configuration["Services__ScreeningsBaseUrl"] ?? "http://localhost:5004";
 builder.Services.AddDbContext<HallsDbContext>(o => o.UseSqlServer(connection));
 builder.Services.AddScoped<IHallService, HallService>();

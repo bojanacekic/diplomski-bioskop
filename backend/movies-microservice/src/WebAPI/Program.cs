@@ -30,6 +30,8 @@ var jwtSecretKey =
     builder.Configuration["Jwt:SecretKey"]
     ?? builder.Configuration["Jwt__SecretKey"]
     ?? throw new InvalidOperationException("Jwt:SecretKey is not configured.");
+if (jwtSecretKey.Length < 32)
+    throw new InvalidOperationException("Jwt:SecretKey must contain at least 32 characters.");
 builder.Services.AddDbContext<MoviesDbContext>(options => options.UseSqlServer(connection));
 builder.Services.AddScoped<IMovieService, MovieService>();
 builder.Services.AddSingleton<IMovieRequestValidator, MovieRequestValidator>();

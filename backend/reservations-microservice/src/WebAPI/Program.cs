@@ -29,6 +29,8 @@ var connectionString =
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? builder.Configuration["Jwt__Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? builder.Configuration["Jwt__Audience"] ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
 var jwtSecret = builder.Configuration["Jwt:SecretKey"] ?? builder.Configuration["Jwt__SecretKey"] ?? throw new InvalidOperationException("Jwt:SecretKey is not configured.");
+if (jwtSecret.Length < 32)
+    throw new InvalidOperationException("Jwt:SecretKey must contain at least 32 characters.");
 var gatewayBaseUrl =
     builder.Configuration["Services:GatewayBaseUrl"]
     ?? builder.Configuration["Services__GatewayBaseUrl"]

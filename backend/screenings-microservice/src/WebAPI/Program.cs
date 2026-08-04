@@ -20,6 +20,8 @@ builder.WebHost.UseUrls(screeningsUrl);
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? builder.Configuration["Jwt__Issuer"] ?? throw new InvalidOperationException("Jwt:Issuer is not configured.");
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? builder.Configuration["Jwt__Audience"] ?? throw new InvalidOperationException("Jwt:Audience is not configured.");
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? builder.Configuration["Jwt__SecretKey"] ?? throw new InvalidOperationException("Jwt:SecretKey is not configured.");
+if (jwtSecretKey.Length < 32)
+    throw new InvalidOperationException("Jwt:SecretKey must contain at least 32 characters.");
 var connection =
     builder.Configuration.GetConnectionString("ScreeningsDatabase")
     ?? Environment.GetEnvironmentVariable("ConnectionStrings__ScreeningsDatabase")
