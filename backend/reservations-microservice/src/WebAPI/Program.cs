@@ -39,6 +39,8 @@ var gatewayBaseUrl =
 builder.WebHost.UseUrls(reservationsUrl);
 builder.Services.AddDbContext<ReservationsDbContext>(options => options.UseSqlServer(connectionString));
 builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 builder.Services.AddHostedService<ReservationExpirationHostedService>();
 builder.Services.AddHttpClient("Gateway", client =>
     client.BaseAddress = new Uri($"{gatewayBaseUrl.TrimEnd('/')}/"));
@@ -79,6 +81,11 @@ Guid CurrentUserId(ClaimsPrincipal user)
     return TryCurrentUserId(user) ?? throw new UnauthorizedAccessException();
 }
 
+string CurrentUserEmail(ClaimsPrincipal user) =>
+    user.FindFirstValue(ClaimTypes.Email)
+    ?? user.FindFirstValue(JwtRegisteredClaimNames.Email)
+    ?? throw new UnauthorizedAccessException();
+
 Guid? TryCurrentUserId(ClaimsPrincipal user)
 {
     var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub);
@@ -104,7 +111,12 @@ app.MapPost("/api/reservations", async (CreateReservationRequestDto request, Cla
         return Results.ValidationProblem(errors);
     try
     {
-        var reservations = await service.CreateAsync(CurrentUserId(user), request, token);
+        var reservations = await service.CreateAsync(
+            CurrentUserId(user),
+            CurrentUserEmail(user),
+            request,
+            token
+        );
         return Results.Created("/api/reservations", reservations);
     }
     catch (InvalidOperationException exception)
