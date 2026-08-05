@@ -178,6 +178,20 @@ app.MapPut(
     .RequireAuthorization();
 
 app.MapPut(
+        "/api/reservations/screenings/{screeningId:guid}/cascade-delete",
+        async (Guid screeningId, HttpRequest request, IReservationService service, CancellationToken token) =>
+            Results.Ok(new
+            {
+                deletedCount = await service.DeleteForScreeningAsync(
+                    screeningId,
+                    request.Headers.Authorization.ToString(),
+                    token
+                )
+            })
+    )
+    .RequireAuthorization("ReservationManagement");
+
+app.MapPut(
         "/api/reservations/{id:guid}/confirm",
         async (
             Guid id,

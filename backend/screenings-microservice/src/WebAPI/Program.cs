@@ -12,6 +12,7 @@ DotEnvReader.Load(
     Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", ".env"))
 );
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 var screeningsUrl =
     builder.Configuration["Screenings:Url"]
     ?? builder.Configuration["Screenings__Url"]
@@ -28,8 +29,14 @@ var connection =
     ?? throw new InvalidOperationException(
         "ConnectionStrings__ScreeningsDatabase is not configured."
     );
+var gatewayBaseUrl =
+    builder.Configuration["Services:GatewayBaseUrl"]
+    ?? builder.Configuration["Services__GatewayBaseUrl"]
+    ?? "http://localhost:5001";
 builder.Services.AddDbContext<ScreeningsDbContext>(o => o.UseSqlServer(connection));
 builder.Services.AddScoped<IScreeningService, ScreeningService>();
+builder.Services.AddHttpClient("Gateway", client =>
+    client.BaseAddress = new Uri($"{gatewayBaseUrl.TrimEnd('/')}/"));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters { ValidateIssuer = true, ValidIssuer = jwtIssuer, ValidateAudience = true, ValidAudience = jwtAudience, ValidateIssuerSigningKey = true, IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)), ValidateLifetime = true });
 builder.Services.AddAuthorization(options => options.AddPolicy("ScreeningManagement", policy => policy.RequireRole("CinemaManager", "Administrator")));
 builder.Services.AddCors(o =>
@@ -101,7 +108,36 @@ app.MapPut(
 ).RequireAuthorization("ScreeningManagement");
 app.MapDelete(
     "/api/screenings/{id:guid}",
-    async (Guid id, IScreeningService s, CancellationToken t) =>
-        await s.DeleteAsync(id, t) ? Results.NoContent() : Results.NotFound()
+    async (Guid id, HttpRequest request, IHttpClientFactory clients, IScreeningService s, CancellationToken t) =>
+    {
+        if (await s.GetByIdAsync(id, t) is null)
+            return Results.NotFound();
+
+        var gateway = clients.CreateClient("Gateway");
+        foreach (var path in new[]
+        {
+            $"api/tickets/screenings/{id}/cascade-delete",
+            $"api/reservations/screenings/{id}/cascade-delete"
+        })
+        {
+            using var cascadeRequest = new HttpRequestMessage(HttpMethod.Put, path);
+            cascadeRequest.Headers.TryAddWithoutValidation(
+                "Authorization",
+                request.Headers.Authorization.ToString()
+            );
+            using var response = await gateway.SendAsync(cascadeRequest, t);
+            if (!response.IsSuccessStatusCode)
+            {
+                var details = await response.Content.ReadAsStringAsync(t);
+                return Results.Conflict(new
+                {
+                    message = "The screening could not be deleted because related reservations or tickets could not be removed.",
+                    details
+                });
+            }
+        }
+
+        return await s.DeleteAsync(id, t) ? Results.NoContent() : Results.NotFound();
+    }
 ).RequireAuthorization("ScreeningManagement");
 app.Run();

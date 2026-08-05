@@ -55,4 +55,5 @@ public interface ITicketPurchaseService
         string authorizationHeader,
         CancellationToken token
     );
+    Task<int> DeleteForScreeningAsync(Guid screeningId, string authorizationHeader, CancellationToken token);
 }

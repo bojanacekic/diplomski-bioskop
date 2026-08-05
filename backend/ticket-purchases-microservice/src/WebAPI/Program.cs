@@ -270,6 +270,29 @@ app.MapDelete(
     )
     .RequireAuthorization();
 
+app.MapPut(
+        "/api/tickets/screenings/{screeningId:guid}/cascade-delete",
+        async (Guid screeningId, HttpRequest request, ITicketPurchaseService service, CancellationToken token) =>
+        {
+            try
+            {
+                return Results.Ok(new
+                {
+                    deletedCount = await service.DeleteForScreeningAsync(
+                        screeningId,
+                        request.Headers.Authorization.ToString(),
+                        token
+                    )
+                });
+            }
+            catch (InvalidOperationException exception)
+            {
+                return Results.Conflict(new { message = exception.Message });
+            }
+        }
+    )
+    .RequireAuthorization("BoxOfficeSales");
+
 app.MapGet(
         "/api/tickets/{id:guid}/pdf",
         async (

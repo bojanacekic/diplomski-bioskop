@@ -233,6 +233,50 @@ public sealed class ReservationService(
         return true;
     }
 
+    public async Task<int> DeleteForScreeningAsync(
+        Guid screeningId,
+        string authorizationHeader,
+        CancellationToken token
+    )
+    {
+        var reservations = await db.Reservations
+            .Where(item => item.ScreeningId == screeningId &&
+                (item.Status == ReservationStatus.Active || item.Status == ReservationStatus.Confirmed))
+            .ToListAsync(token);
+        if (reservations.Count == 0)
+            return 0;
+
+        var gateway = httpClientFactory.CreateClient("Gateway");
+        var screening = await GetFromGatewayAsync<ScreeningDetailsDto>(gateway, $"api/screenings/{screeningId}", token);
+        var movie = screening is null ? null : await GetFromGatewayAsync<MovieDetailsDto>(gateway, $"api/movies/{screening.MovieId}", token);
+        db.Reservations.RemoveRange(reservations);
+        await db.SaveChangesAsync(token);
+
+        foreach (var userId in reservations.Select(item => item.UserId).Distinct())
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, $"api/users/{userId}/reservation-customer");
+                request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorizationHeader);
+                using var response = await gateway.SendAsync(request, token);
+                if (!response.IsSuccessStatusCode) continue;
+                var customer = await response.Content.ReadFromJsonAsync<ReservationCustomerDto>(cancellationToken: token);
+                if (string.IsNullOrWhiteSpace(customer?.Email)) continue;
+                var title = WebUtility.HtmlEncode(movie?.Title ?? "your selected movie");
+                await emailSender.SendAsync(customer.Email, "Smart Cinema screening cancelled", $"""
+                    <p>Hello {WebUtility.HtmlEncode(customer.FirstName)},</p>
+                    <p>The screening for <strong>{title}</strong> has been cancelled.</p>
+                    <p>Your reservation and any related tickets have been removed. Any online payment has been refunded.</p>
+                    """, token);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                logger.LogError(exception, "Cancellation email could not be sent to user {UserId}.", userId);
+            }
+        }
+        return reservations.Count;
+    }
+
     public async Task<IReadOnlyList<ReservationResponseDto>> RequestCashPaymentAsync(
         Guid id,
         Guid userId,

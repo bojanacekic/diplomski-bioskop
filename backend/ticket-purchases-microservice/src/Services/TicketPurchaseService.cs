@@ -394,6 +394,34 @@ public sealed class TicketPurchaseService(
         return purchaseTickets.Select(Map).ToList();
     }
 
+    public async Task<int> DeleteForScreeningAsync(
+        Guid screeningId,
+        string authorizationHeader,
+        CancellationToken token
+    )
+    {
+        var tickets = await db.TicketPurchases
+            .Where(item => item.ScreeningId == screeningId && item.Status != TicketStatus.Cancelled)
+            .ToListAsync(token);
+        if (tickets.Any(item => item.Status == TicketStatus.Used))
+            throw new InvalidOperationException("A screening with used tickets cannot be deleted.");
+
+        var gateway = httpClientFactory.CreateClient("Gateway");
+        foreach (var paymentId in tickets
+            .Where(item => item.PaymentMethod == PaymentMethod.OnlineCard && item.PaymentId.HasValue)
+            .Select(item => item.PaymentId!.Value)
+            .Distinct())
+        {
+            var refund = await UpdatePaymentAsync(gateway, authorizationHeader, paymentId, "refund", token);
+            if (refund.Status != 5)
+                throw new InvalidOperationException("An online ticket payment could not be refunded.");
+        }
+
+        db.TicketPurchases.RemoveRange(tickets);
+        await db.SaveChangesAsync(token);
+        return tickets.Count;
+    }
+
     private static async Task<T?> GetFromGatewayAsync<T>(
         HttpClient gateway,
         string path,

@@ -32,4 +32,5 @@ public interface IReservationService
         string authorizationHeader,
         CancellationToken token
     );
+    Task<int> DeleteForScreeningAsync(Guid screeningId, string authorizationHeader, CancellationToken token);
 }

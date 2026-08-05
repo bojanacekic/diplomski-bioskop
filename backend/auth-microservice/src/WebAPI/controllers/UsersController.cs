@@ -74,6 +74,7 @@ public sealed class UsersController(IUserManagementService users) : ControllerBa
                     Username = user.Username,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
+                    Email = user.Email,
                 }
             );
     }
