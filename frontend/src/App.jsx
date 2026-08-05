@@ -616,6 +616,11 @@ function App() {
           token={session?.accessToken}
           activeTab={profileTab}
           onTabChange={(tab) => navigate("profile", tab)}
+          onProfileUpdated={(profile) => {
+            const updatedSession = { ...session, username: profile.username };
+            sessionStorage.setItem("smartCinemaSession", JSON.stringify(updatedSession));
+            setSession(updatedSession);
+          }}
           onBack={() => navigate("home")}
         />
       ) : page === "movie-details" && selectedMovie ? (

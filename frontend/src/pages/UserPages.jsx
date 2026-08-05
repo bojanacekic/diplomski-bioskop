@@ -9,7 +9,7 @@ const headers = (token) => ({
   Authorization: `Bearer ${token}`,
 });
 
-export function ProfilePage({ token, activeTab = "details", onTabChange, onBack }) {
+export function ProfilePage({ token, activeTab = "details", onTabChange, onProfileUpdated, onBack }) {
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -99,6 +99,7 @@ export function ProfilePage({ token, activeTab = "details", onTabChange, onBack 
         firstName: payload.firstName,
         lastName: payload.lastName,
       });
+      onProfileUpdated?.(payload);
       setMessage({ type: "success", text: "Profile updated successfully." });
     } catch {
       setMessage({
