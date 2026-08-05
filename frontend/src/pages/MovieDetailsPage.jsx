@@ -69,6 +69,7 @@ export default function MovieDetailsPage({
   token,
   onBack,
   onSignIn,
+  onReservationCreated,
 }) {
   const [fullMovie, setFullMovie] = useState(movie);
   const [screenings, setScreenings] = useState([]);
@@ -226,7 +227,7 @@ export default function MovieDetailsPage({
       text: `${selectedSeats.length} seat${selectedSeats.length === 1 ? "" : "s"} reserved successfully.`,
     });
     setSelectedSeats([]);
-    loadReservedSeats(selectedScreeningId);
+    onReservationCreated?.();
   };
 
   if (!movie) return null;

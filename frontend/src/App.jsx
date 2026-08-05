@@ -629,6 +629,7 @@ function App() {
           token={session?.accessToken}
           onBack={() => navigate("home")}
           onSignIn={() => goAuth("login", "movie-details")}
+          onReservationCreated={() => navigate("profile", "reservations")}
         />
       ) : page === "movie-details" ? (
         <p className="state-message">Loading movie...</p>
