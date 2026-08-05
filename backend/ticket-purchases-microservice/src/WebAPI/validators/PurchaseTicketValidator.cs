@@ -11,6 +11,11 @@ public static class PurchaseTicketValidator
             errors["reservationId"] = ["Reservation is required."];
         if (string.IsNullOrWhiteSpace(request.CardholderName))
             errors["cardholderName"] = ["Cardholder name is required."];
+        else if (
+            request.CardholderName.Any(char.IsDigit)
+            || !request.CardholderName.Any(char.IsLetter)
+        )
+            errors["cardholderName"] = ["Cardholder name must contain letters and cannot contain numbers."];
         if (
             request.CardNumber.Replace(" ", string.Empty).Replace("-", string.Empty).Length
                 is < 13 or > 19

@@ -61,13 +61,19 @@ export default function PaymentModal({ isOpen, price, onClose, onSubmit, submitt
             ? formatExpiryDate(value)
             : name === "cvv"
               ? value.replace(/\D/g, "").slice(0, 4)
-            : value,
+              : name === "cardholderName"
+                ? value.replace(/\d/g, "")
+                : value,
     }));
     setError("");
   };
 
   const submit = async (event) => {
     event.preventDefault();
+    if (!/^[\p{L}][\p{L}\s.'-]*$/u.test(form.cardholderName.trim())) {
+      setError("Cardholder name must contain letters and cannot contain numbers.");
+      return;
+    }
     const [month, year] = form.expiryDate.split("/").map(Number);
 
     if (
@@ -103,7 +109,7 @@ export default function PaymentModal({ isOpen, price, onClose, onSubmit, submitt
         <p className="profile-help">No card details are saved. This is a test payment for {Number(price).toFixed(2)} RSD.</p>
         <label>
           Cardholder name
-          <input name="cardholderName" value={form.cardholderName} onChange={update} required />
+          <input name="cardholderName" value={form.cardholderName} onChange={update} placeholder="Name on card" required />
         </label>
         <label>
           Card number

@@ -8,6 +8,9 @@ public sealed class ResetPasswordRequestValidator : AbstractValidator<ResetPassw
     public ResetPasswordRequestValidator()
     {
         RuleFor(request => request.Token).NotEmpty().Length(64);
-        RuleFor(request => request.NewPassword).NotEmpty().MaximumLength(100);
+        RuleFor(request => request.NewPassword)
+            .NotEmpty()
+            .MinimumLength(6).WithMessage("Password must be at least 6 characters.")
+            .MaximumLength(100);
     }
 }

@@ -8,6 +8,8 @@ public sealed class ChangePasswordRequestValidator : AbstractValidator<ChangePas
     public ChangePasswordRequestValidator()
     {
         RuleFor(request => request.CurrentPassword).NotEmpty();
-        RuleFor(request => request.NewPassword).NotEmpty();
+        RuleFor(request => request.NewPassword)
+            .NotEmpty()
+            .MinimumLength(6).WithMessage("Password must be at least 6 characters.");
     }
 }

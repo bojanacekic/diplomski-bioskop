@@ -16,6 +16,19 @@ public sealed class AuthService(
 )
     : IAuthService
 {
+    private static readonly string[] CommonEmailDomains =
+    [
+        "gmail.com",
+        "outlook.com",
+        "hotmail.com",
+        "yahoo.com",
+        "ymail.com",
+        "icloud.com",
+        "proton.me",
+        "protonmail.com",
+        "mail.com",
+    ];
+
     public async Task<AuthResult> RegisterAsync(
         RegisterUserRequestDto request,
         CancellationToken cancellationToken
@@ -23,6 +36,17 @@ public sealed class AuthService(
     {
         var username = request.Username.Trim();
         var email = request.Email.Trim().ToLowerInvariant();
+        var emailDomain = email[(email.LastIndexOf('@') + 1)..];
+        var suggestedDomain = CommonEmailDomains.FirstOrDefault(domain =>
+            domain != emailDomain && EditDistance(emailDomain, domain) == 1
+        );
+        if (suggestedDomain is not null)
+            return AuthResult.Failure(
+                $"The email domain looks misspelled. Did you mean {suggestedDomain}?"
+            );
+        if (!await EmailDomainExistsAsync(email, cancellationToken))
+            return AuthResult.Failure("Enter an email address with an existing domain.");
+
         var alreadyExists = await dbContext.Users.AnyAsync(
             user => user.Username == username || (user.IsActive && user.Email == email),
             cancellationToken
@@ -47,6 +71,51 @@ public sealed class AuthService(
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync(cancellationToken);
         return AuthResult.Success(jwtTokenGenerator.Generate(user));
+    }
+
+    private static async Task<bool> EmailDomainExistsAsync(
+        string email,
+        CancellationToken cancellationToken
+    )
+    {
+        var separator = email.LastIndexOf('@');
+        if (separator < 1 || separator == email.Length - 1)
+            return false;
+
+        try
+        {
+            var addresses = await Dns.GetHostAddressesAsync(
+                email[(separator + 1)..],
+                cancellationToken
+            );
+            return addresses.Length > 0;
+        }
+        catch (Exception exception) when (
+            exception is System.Net.Sockets.SocketException or ArgumentException
+        )
+        {
+            return false;
+        }
+    }
+
+    private static int EditDistance(string left, string right)
+    {
+        var previous = Enumerable.Range(0, right.Length + 1).ToArray();
+        for (var leftIndex = 1; leftIndex <= left.Length; leftIndex++)
+        {
+            var current = new int[right.Length + 1];
+            current[0] = leftIndex;
+            for (var rightIndex = 1; rightIndex <= right.Length; rightIndex++)
+            {
+                var substitutionCost = left[leftIndex - 1] == right[rightIndex - 1] ? 0 : 1;
+                current[rightIndex] = Math.Min(
+                    Math.Min(current[rightIndex - 1] + 1, previous[rightIndex] + 1),
+                    previous[rightIndex - 1] + substitutionCost
+                );
+            }
+            previous = current;
+        }
+        return previous[right.Length];
     }
 
     public async Task<AuthResult> LoginAsync(

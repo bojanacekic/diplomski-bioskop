@@ -114,6 +114,14 @@ export function ProfilePage({ token, activeTab = "details", onTabChange, onProfi
     event.preventDefault();
     setPasswordMessage(null);
 
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordMessage({
+        type: "error",
+        text: "Password must be at least 6 characters.",
+      });
+      return;
+    }
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       setPasswordMessage({
         type: "error",

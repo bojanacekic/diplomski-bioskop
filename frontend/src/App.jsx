@@ -393,6 +393,10 @@ function App() {
 
   const submitAuth = async (event) => {
     event.preventDefault();
+    if (authMode === "register" && registerForm.password.length < 6) {
+      setMessage({ type: "error", text: "Password must be at least 6 characters." });
+      return;
+    }
     if (!apiUrl)
       return setMessage({
         type: "error",
@@ -457,6 +461,7 @@ function App() {
   const resetPassword = async (event) => {
     event.preventDefault();
     setMessage(null);
+    if (resetForm.newPassword.length < 6) return;
     if (resetForm.newPassword !== resetForm.confirmPassword)
       return setMessage({ type: "error", text: "Passwords do not match." });
 
@@ -936,6 +941,9 @@ function App() {
                     required
                   />
                 </label>
+                {resetForm.newPassword.length > 0 && resetForm.newPassword.length < 6 && (
+                  <p className="form-error">Password must be at least 6 characters.</p>
+                )}
                 <label>
                   Confirm new password
                   <input
