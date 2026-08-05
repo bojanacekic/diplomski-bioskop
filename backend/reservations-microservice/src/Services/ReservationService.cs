@@ -127,13 +127,34 @@ public sealed class ReservationService(
         try
         {
             var userEmail = await GetCurrentUserEmailAsync(authorizationHeader, token);
+            var gateway = httpClientFactory.CreateClient("Gateway");
+            var screening = await GetFromGatewayAsync<ScreeningDetailsDto>(
+                gateway,
+                $"api/screenings/{request.ScreeningId}",
+                token
+            );
+            var movie = screening is null
+                ? null
+                : await GetFromGatewayAsync<MovieDetailsDto>(
+                    gateway,
+                    $"api/movies/{screening.MovieId}",
+                    token
+                );
             var seats = WebUtility.HtmlEncode(string.Join(", ", seatLabels));
+            var movieTitle = WebUtility.HtmlEncode(movie?.Title ?? "Movie information unavailable");
+            var screeningTime = screening is null
+                ? "Screening information unavailable"
+                : DateTime.SpecifyKind(screening.StartsAtUtc, DateTimeKind.Utc)
+                    .ToLocalTime()
+                    .ToString("dd.MM.yyyy. HH:mm");
             var bookingReference = $"SC-{reservationGroupId:N}"[..11].ToUpperInvariant();
             await emailSender.SendAsync(
                 userEmail,
                 "Smart Cinema reservation confirmed",
                 $"""
                 <p>Your Smart Cinema reservation was created successfully.</p>
+                <p><strong>Movie:</strong> {movieTitle}</p>
+                <p><strong>Screening:</strong> {screeningTime}</p>
                 <p><strong>Seats:</strong> {seats}</p>
                 <p><strong>Booking reference:</strong> {bookingReference}</p>
                 <p>You can review and manage the reservation under <strong>My reservations</strong>.</p>
