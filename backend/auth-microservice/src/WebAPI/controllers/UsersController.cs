@@ -104,4 +104,18 @@ public sealed class UsersController(IUserManagementService users) : ControllerBa
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken t) =>
         await users.DeactivateAsync(id, t) ? NoContent() : NotFound();
+
+    [HttpPatch("{id:guid}/activate")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> Activate(Guid id, CancellationToken t)
+    {
+        try
+        {
+            return await users.ActivateAsync(id, t) ? NoContent() : NotFound();
+        }
+        catch (InvalidOperationException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
+    }
 }

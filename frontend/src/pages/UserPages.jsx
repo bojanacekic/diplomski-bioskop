@@ -739,6 +739,8 @@ export function UserManagementPage({ token, onBack }) {
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState(null);
   const [confirmDeactivateId, setConfirmDeactivateId] = useState(null);
+  const [confirmActivateId, setConfirmActivateId] = useState(null);
+  const [userMessage, setUserMessage] = useState(null);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -774,10 +776,31 @@ export function UserManagementPage({ token, onBack }) {
     load();
   };
   const deactivate = async (id) => {
-    await fetch(`${api}/api/users/${id}/deactivate`, {
+    setUserMessage(null);
+    const response = await fetch(`${api}/api/users/${id}/deactivate`, {
       method: "PATCH",
       headers: headers(token),
     });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setUserMessage({ type: "error", text: payload.message ?? "User could not be deactivated." });
+      return;
+    }
+    setUserMessage({ type: "success", text: "User deactivated successfully." });
+    load();
+  };
+  const activate = async (id) => {
+    setUserMessage(null);
+    const response = await fetch(`${api}/api/users/${id}/activate`, {
+      method: "PATCH",
+      headers: headers(token),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      setUserMessage({ type: "error", text: payload.message ?? "User could not be activated." });
+      return;
+    }
+    setUserMessage({ type: "success", text: "User activated successfully." });
     load();
   };
   const openEdit = (user) => {
@@ -807,6 +830,7 @@ export function UserManagementPage({ token, onBack }) {
           placeholder="Search name, username or email"
         />
       </label>
+      {userMessage && <p className={`form-message ${userMessage.type}`}>{userMessage.text}</p>}
       <div className="management-list user-list">
         {users.map((user) => (
           <article className="manage-card" key={user.id}>
@@ -843,6 +867,14 @@ export function UserManagementPage({ token, onBack }) {
                   onClick={() => setConfirmDeactivateId(user.id)}
                 >
                   Deactivate
+                </button>
+              )}
+              {!user.isActive && (
+                <button
+                  className="submit-button"
+                  onClick={() => setConfirmActivateId(user.id)}
+                >
+                  Activate
                 </button>
               )}
             </div>
@@ -928,6 +960,18 @@ export function UserManagementPage({ token, onBack }) {
           deactivate(userId);
         }}
         onClose={() => setConfirmDeactivateId(null)}
+      />
+      <ConfirmationDialog
+        isOpen={Boolean(confirmActivateId)}
+        title="Activate this user?"
+        message="The user will be able to sign in again."
+        confirmLabel="Activate user"
+        onConfirm={() => {
+          const userId = confirmActivateId;
+          setConfirmActivateId(null);
+          activate(userId);
+        }}
+        onClose={() => setConfirmActivateId(null)}
       />
     </section>
   );

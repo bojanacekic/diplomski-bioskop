@@ -104,6 +104,23 @@ public sealed class UserManagementService(AuthDbContext db) : IUserManagementSer
         return true;
     }
 
+    public async Task<bool> ActivateAsync(Guid id, CancellationToken t)
+    {
+        var u = await db.Users.SingleOrDefaultAsync(x => x.Id == id, t);
+        if (u is null)
+            return false;
+        if (u.IsActive)
+            return true;
+        if (await db.Users.AnyAsync(x => x.Id != id && x.IsActive && x.Email == u.Email, t))
+            throw new InvalidOperationException(
+                "This email address is already used by another active account. Change the email before activating this user."
+            );
+
+        u.IsActive = true;
+        await db.SaveChangesAsync(t);
+        return true;
+    }
+
     private static System.Linq.Expressions.Expression<Func<User, UserResponseDto>> Map() =>
         u => new UserResponseDto
         {
