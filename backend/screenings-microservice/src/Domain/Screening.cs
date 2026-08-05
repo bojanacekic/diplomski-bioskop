@@ -9,4 +9,5 @@ public sealed class Screening
     public DateTime EndsAtUtc { get; set; }
     public decimal BaseTicketPrice { get; set; }
     public ScreeningStatus Status { get; set; } = ScreeningStatus.Scheduled;
+    public DateTime CreatedAtUtc { get; set; }
 }

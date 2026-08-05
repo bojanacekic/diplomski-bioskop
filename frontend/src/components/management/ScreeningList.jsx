@@ -16,11 +16,15 @@ export default function ScreeningList({
 }) {
   const name = (items, id, field) =>
     items.find((item) => item.id === id)?.[field] ?? "Unknown";
-  const visible = screenings.filter((screening) =>
-    `${name(movies, screening.movieId, "title")} ${name(halls, screening.hallId, "name")}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
+  const visible = screenings
+    .filter((screening) =>
+      `${name(movies, screening.movieId, "title")} ${name(halls, screening.hallId, "name")}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+    )
+    .sort(
+      (left, right) => new Date(right.startsAtUtc) - new Date(left.startsAtUtc),
+    );
   return (
     <div>
       <label className="search">

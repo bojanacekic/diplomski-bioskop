@@ -15,6 +15,7 @@ public sealed class ScreeningsDbContext(DbContextOptions<ScreeningsDbContext> op
         s.HasKey(x => x.Id);
         s.Property(x => x.BaseTicketPrice).HasPrecision(10, 2);
         s.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        s.Property(x => x.CreatedAtUtc).HasDefaultValueSql("GETUTCDATE()").IsRequired();
         s.HasIndex(x => new
         {
             x.HallId,

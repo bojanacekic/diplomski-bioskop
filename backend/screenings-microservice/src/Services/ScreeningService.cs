@@ -63,6 +63,7 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
             EndsAtUtc = request.EndsAtUtc,
             BaseTicketPrice = request.BaseTicketPrice,
             Status = StatusFor(request.Status, request.EndsAtUtc),
+            CreatedAtUtc = DateTime.UtcNow,
         };
 
         db.Screenings.Add(screening);
@@ -131,5 +132,6 @@ public sealed class ScreeningService(ScreeningsDbContext db) : IScreeningService
             EndsAtUtc = DateTime.SpecifyKind(screening.EndsAtUtc, DateTimeKind.Utc),
             BaseTicketPrice = screening.BaseTicketPrice,
             Status = screening.Status,
+            CreatedAtUtc = DateTime.SpecifyKind(screening.CreatedAtUtc, DateTimeKind.Utc),
         };
 }

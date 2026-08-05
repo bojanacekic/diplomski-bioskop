@@ -9,4 +9,5 @@ public sealed class ScreeningResponseDto
     public DateTime EndsAtUtc { get; init; }
     public decimal BaseTicketPrice { get; init; }
     public ScreeningStatus Status { get; init; }
+    public DateTime CreatedAtUtc { get; init; }
 }
