@@ -9,7 +9,7 @@ public interface IReservationService
     Task<IReadOnlyList<ReservedSeatResponseDto>> GetReservedSeatsAsync(Guid screeningId, Guid? userId, CancellationToken token);
     Task<IReadOnlyList<ReservationResponseDto>> CreateAsync(
         Guid userId,
-        string userEmail,
+        string authorizationHeader,
         CreateReservationRequestDto request,
         CancellationToken token
     );

@@ -76,7 +76,7 @@ public sealed class ReservationService(
 
     public async Task<IReadOnlyList<ReservationResponseDto>> CreateAsync(
         Guid userId,
-        string userEmail,
+        string authorizationHeader,
         CreateReservationRequestDto request,
         CancellationToken token
     )
@@ -126,6 +126,7 @@ public sealed class ReservationService(
 
         try
         {
+            var userEmail = await GetCurrentUserEmailAsync(authorizationHeader, token);
             var seats = WebUtility.HtmlEncode(string.Join(", ", seatLabels));
             var bookingReference = $"SC-{reservationGroupId:N}"[..11].ToUpperInvariant();
             await emailSender.SendAsync(
@@ -149,6 +150,25 @@ public sealed class ReservationService(
             );
         }
         return reservations.Select(Map).ToList();
+    }
+
+    private async Task<string> GetCurrentUserEmailAsync(
+        string authorizationHeader,
+        CancellationToken token
+    )
+    {
+        var gateway = httpClientFactory.CreateClient("Gateway");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "api/users/me");
+        request.Headers.Authorization = AuthenticationHeaderValue.Parse(authorizationHeader);
+        using var response = await gateway.SendAsync(request, token);
+        response.EnsureSuccessStatusCode();
+        var profile = await response.Content.ReadFromJsonAsync<CurrentUserProfileDto>(
+            cancellationToken: token
+        );
+        if (string.IsNullOrWhiteSpace(profile?.Email))
+            throw new InvalidOperationException("The current user's email address is unavailable.");
+
+        return profile.Email;
     }
 
     public async Task<bool> CancelAsync(

@@ -81,11 +81,6 @@ Guid CurrentUserId(ClaimsPrincipal user)
     return TryCurrentUserId(user) ?? throw new UnauthorizedAccessException();
 }
 
-string CurrentUserEmail(ClaimsPrincipal user) =>
-    user.FindFirstValue(ClaimTypes.Email)
-    ?? user.FindFirstValue(JwtRegisteredClaimNames.Email)
-    ?? throw new UnauthorizedAccessException();
-
 Guid? TryCurrentUserId(ClaimsPrincipal user)
 {
     var userId = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub);
@@ -104,7 +99,7 @@ app.MapGet("/api/reservations", async (Guid? screeningId, IReservationService se
 app.MapGet("/api/reservations/screenings/{screeningId:guid}/seats", async (Guid screeningId, ClaimsPrincipal user, IReservationService service, CancellationToken token) =>
     Results.Ok(await service.GetReservedSeatsAsync(screeningId, TryCurrentUserId(user), token)));
 
-app.MapPost("/api/reservations", async (CreateReservationRequestDto request, ClaimsPrincipal user, IReservationService service, CancellationToken token) =>
+app.MapPost("/api/reservations", async (CreateReservationRequestDto request, HttpRequest httpRequest, ClaimsPrincipal user, IReservationService service, CancellationToken token) =>
 {
     var errors = ReservationValidator.Validate(request);
     if (errors.Count > 0)
@@ -113,7 +108,7 @@ app.MapPost("/api/reservations", async (CreateReservationRequestDto request, Cla
     {
         var reservations = await service.CreateAsync(
             CurrentUserId(user),
-            CurrentUserEmail(user),
+            httpRequest.Headers.Authorization.ToString(),
             request,
             token
         );
