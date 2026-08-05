@@ -10,11 +10,9 @@ export default function MovieTrailer({ title, embedUrl }) {
           <h2>Official trailer</h2>
           <p>Watch the trailer before choosing your screening.</p>
         </div>
-        {!open && (
-          <button className="submit-button" onClick={() => setOpen(true)}>
-            Watch trailer
-          </button>
-        )}
+        <button className="submit-button" onClick={() => setOpen((current) => !current)}>
+          {open ? "Close trailer" : "Watch trailer"}
+        </button>
       </div>
       {open && (
         <div className="trailer-player">
