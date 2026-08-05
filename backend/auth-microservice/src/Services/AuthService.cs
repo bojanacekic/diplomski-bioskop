@@ -24,7 +24,7 @@ public sealed class AuthService(
         var username = request.Username.Trim();
         var email = request.Email.Trim().ToLowerInvariant();
         var alreadyExists = await dbContext.Users.AnyAsync(
-            user => user.Username == username || user.Email == email,
+            user => user.Username == username || (user.IsActive && user.Email == email),
             cancellationToken
         );
 

@@ -20,6 +20,6 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.IsActive).IsRequired();
         builder.Property(user => user.CreatedAtUtc).IsRequired();
         builder.HasIndex(user => user.Username).IsUnique();
-        builder.HasIndex(user => user.Email).IsUnique();
+        builder.HasIndex(user => user.Email).IsUnique().HasFilter("[IsActive] = 1");
     }
 }

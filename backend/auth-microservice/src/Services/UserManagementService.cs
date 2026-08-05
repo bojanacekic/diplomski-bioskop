@@ -49,7 +49,9 @@ public sealed class UserManagementService(AuthDbContext db) : IUserManagementSer
         var email = r.Email.Trim().ToLowerInvariant();
         if (
             await db.Users.AnyAsync(
-                x => x.Id != id && (x.Username == username || x.Email == email),
+                x =>
+                    x.Id != id
+                    && (x.Username == username || (x.IsActive && x.Email == email)),
                 t
             )
         )
