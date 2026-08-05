@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { supportService } from "../services/supportService";
+import { toSupportChatRequestDto } from "../dtos/supportRequestDtos";
 
 const welcomeMessage = {
   role: "assistant",
   content: "Hi! I’m the Smart Cinema assistant. Ask me in English or Serbian.",
 };
 
-export default function AiSupportChat({ apiUrl }) {
+export default function AiSupportChat() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([welcomeMessage]);
   const [draft, setDraft] = useState("");
@@ -29,11 +31,7 @@ export default function AiSupportChat({ apiUrl }) {
     setSending(true);
 
     try {
-      const response = await fetch(`${apiUrl}/api/support/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, history }),
-      });
+      const response = await supportService.sendMessage(toSupportChatRequestDto(message, history));
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.detail || "The AI assistant is unavailable.");
       setMessages((current) => [...current, { role: "assistant", content: payload.message }]);

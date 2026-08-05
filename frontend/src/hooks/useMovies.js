@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getMovies } from "../services/movieService";
+import { movieService } from "../services/movieService";
 
 export const useMovies = (search = "") => {
   const [movies, setMovies] = useState([]);
@@ -8,7 +8,7 @@ export const useMovies = (search = "") => {
     try {
       setState("loading");
       setMovies(
-        await getMovies(search ? `?search=${encodeURIComponent(search)}` : ""),
+        await movieService.getAll(search ? `?search=${encodeURIComponent(search)}` : ""),
       );
       setState("ready");
     } catch {

@@ -1,6 +1,6 @@
 import { useState } from "react";
-
-const api = import.meta.env.VITE_API_GATEWAY_URL;
+import { ticketService } from "../services/ticketService";
+import { toValidateTicketRequestDto } from "../dtos/ticketRequestDtos";
 
 export default function TicketValidationPage({ accessToken, onBack }) {
   const [code, setCode] = useState("");
@@ -13,14 +13,7 @@ export default function TicketValidationPage({ accessToken, onBack }) {
     setResult(null);
 
     try {
-      const response = await fetch(`${api}/api/tickets/validate-entry`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ code }),
-      });
+      const response = await ticketService.validate(toValidateTicketRequestDto(code), accessToken);
       const payload = await response.json().catch(() => ({}));
       setResult({
         valid: response.ok && payload.isValid,

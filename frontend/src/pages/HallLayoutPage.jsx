@@ -1,4 +1,6 @@
- export default function HallLayoutPage({ hall, onBack }) {
+import { hallTypeLabel } from "../models/hallType";
+
+export default function HallLayoutPage({ hall, onBack }) {
   if (!hall) return null;
   const seats = Array.from(
     { length: hall.rows * hall.seatsPerRow },
@@ -13,7 +15,7 @@
         <div>
           <h1>{hall.name}.</h1>
           <p>
-            {["Standard", "Premium", "IMAX", "3D"][hall.type]} hall ·{" "}
+            {hallTypeLabel(hall.type)} hall ·{" "}
             {hall.capacity} seats
           </p>
         </div>

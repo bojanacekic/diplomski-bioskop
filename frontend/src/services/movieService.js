@@ -1,28 +1,33 @@
-import { request } from "./apiClient";
+import { authHeaders, jsonRequest, request } from "./apiClient";
 
-export const getMovies = async (query = "") => {
-  const response = await request(`/api/movies${query}`);
-  return response.ok
-    ? response.json()
-    : Promise.reject(new Error("Movies could not be loaded."));
+const moviesPath = "/api/movies";
+
+export const movieService = {
+  getResponse(query = "", signal) {
+    return request(`${moviesPath}${query}`, { signal });
+  },
+  async getAll(query = "", signal) {
+    const response = await this.getResponse(query, signal);
+    return response.ok
+      ? response.json()
+      : Promise.reject(new Error("Movies could not be loaded."));
+  },
+  getById(id, signal) {
+    return request(`${moviesPath}/${encodeURIComponent(id)}`, { signal });
+  },
+  create(dto, token) {
+    return jsonRequest(moviesPath, "POST", dto, token);
+  },
+  update(id, dto, token) {
+    return jsonRequest(`${moviesPath}/${id}`, "PUT", dto, token);
+  },
+  changeStatus(id, dto, token) {
+    return jsonRequest(`${moviesPath}/${id}/status`, "PATCH", dto, token);
+  },
+  withdraw(id, token) {
+    return request(`${moviesPath}/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(token),
+    });
+  },
 };
-export const createMovie = (dto) =>
-  request("/api/movies", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(dto),
-  });
-export const updateMovie = (id, dto) =>
-  request(`/api/movies/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(dto),
-  });
-export const changeMovieStatus = (id, dto) =>
-  request(`/api/movies/${id}/status`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(dto),
-  });
-export const withdrawMovie = (id) =>
-  request(`/api/movies/${id}`, { method: "DELETE" });

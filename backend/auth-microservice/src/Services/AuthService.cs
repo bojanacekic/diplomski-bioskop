@@ -37,9 +37,9 @@ public sealed class AuthService(
         var username = request.Username.Trim();
         var email = request.Email.Trim().ToLowerInvariant();
         var emailDomain = email[(email.LastIndexOf('@') + 1)..];
-        var suggestedDomain = CommonEmailDomains.FirstOrDefault(domain =>
-            domain != emailDomain && EditDistance(emailDomain, domain) == 1
-        );
+        var suggestedDomain = CommonEmailDomains.Contains(emailDomain)
+            ? null
+            : CommonEmailDomains.FirstOrDefault(domain => EditDistance(emailDomain, domain) == 1);
         if (suggestedDomain is not null)
             return AuthResult.Failure(
                 $"The email domain looks misspelled. Did you mean {suggestedDomain}?"

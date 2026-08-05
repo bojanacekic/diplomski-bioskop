@@ -1,18 +1,20 @@
-const api = import.meta.env.VITE_API_GATEWAY_URL;
+import { hallService } from "./hallService";
+import { movieService } from "./movieService";
+import { screeningService } from "./screeningService";
 const cacheLifetimeMs = 30_000;
 
 let cachedData = null;
 let cachedAt = 0;
 let pendingRequest = null;
 
-export const getCinemaReferenceData = async () => {
+const getAll = async () => {
   if (cachedData && Date.now() - cachedAt < cacheLifetimeMs) return cachedData;
   if (pendingRequest) return pendingRequest;
 
   pendingRequest = Promise.all([
-    fetch(`${api}/api/screenings`),
-    fetch(`${api}/api/movies?includeImages=false`),
-    fetch(`${api}/api/halls`),
+    screeningService.getAll(),
+    movieService.getResponse("?includeImages=false"),
+    hallService.getAll(),
   ])
     .then(async ([screeningsResponse, moviesResponse, hallsResponse]) => ({
       screenings: screeningsResponse.ok ? await screeningsResponse.json() : [],
@@ -30,3 +32,5 @@ export const getCinemaReferenceData = async () => {
 
   return pendingRequest;
 };
+
+export const cinemaReferenceService = { getAll };

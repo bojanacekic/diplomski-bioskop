@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import ConfirmationDialog from "../components/ConfirmationDialog";
-
-const api = import.meta.env.VITE_API_GATEWAY_URL;
+import { hallService } from "../services/hallService";
+import { toHallRequestDto } from "../dtos/hallRequestDtos";
+import { hallTypeLabel } from "../models/hallType";
+import { toHallForm } from "../mappers/hallMapper";
 const empty = { name: "", type: 0, rows: "", seatsPerRow: "" };
 
 export default function HallManagementPage({ accessToken, onBack, onViewLayout }) {
@@ -12,9 +14,7 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
   const [message, setMessage] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const load = async () => {
-    const response = await fetch(
-      `${api}/api/halls${search ? `?search=${encodeURIComponent(search)}` : ""}`,
-    );
+    const response = await hallService.getAll(search ? `?search=${encodeURIComponent(search)}` : "");
     if (response.ok) setHalls(await response.json());
   };
   useEffect(() => {
@@ -22,12 +22,7 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
   }, [search]);
   const openEdit = (hall) => {
     setEditingId(hall.id);
-    setForm({
-      name: hall.name,
-      type: hall.type,
-      rows: hall.rows,
-      seatsPerRow: hall.seatsPerRow,
-    });
+    setForm(toHallForm(hall));
     setMessage("");
   };
   const cancelEdit = () => {
@@ -37,10 +32,7 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
   };
   const deleteHall = async () => {
     if (!editingId) return;
-    const response = await fetch(`${api}/api/halls/${editingId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const response = await hallService.deactivate(editingId, accessToken);
     if (response.ok) {
       cancelEdit();
       load();
@@ -48,19 +40,10 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
   };
   const submit = async (event) => {
     event.preventDefault();
-    const response = await fetch(
-      `${api}/api/halls${editingId ? `/${editingId}` : ""}`,
-      {
-        method: editingId ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({
-          ...form,
-          type: Number(form.type),
-          rows: Number(form.rows),
-          seatsPerRow: Number(form.seatsPerRow),
-        }),
-      },
-    );
+    const dto = toHallRequestDto(form);
+    const response = editingId
+      ? await hallService.update(editingId, dto, accessToken)
+      : await hallService.create(dto, accessToken);
     setMessage(
       response.ok
         ? editingId
@@ -191,7 +174,7 @@ export default function HallManagementPage({ accessToken, onBack, onViewLayout }
               >
                 <div>
                   <p className="eyebrow">
-                    {["STANDARD", "PREMIUM", "IMAX", "3D"][hall.type]}
+                    {hallTypeLabel(hall.type).toUpperCase()}
                   </p>
                   <h2>{hall.name}</h2>
                   <p>

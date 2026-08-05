@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import ConfirmationDialog from "../components/ConfirmationDialog";
-import { getCinemaReferenceData } from "../services/cinemaReferenceService";
-
-const api = import.meta.env.VITE_API_GATEWAY_URL;
-
-const headers = (accessToken) => ({
-  Authorization: `Bearer ${accessToken}`,
-});
+import { cinemaReferenceService } from "../services/cinemaReferenceService";
+import { reservationService } from "../services/reservationService";
+import { ticketService } from "../services/ticketService";
+import { userService } from "../services/userService";
+import { toCashTicketRequestDto } from "../dtos/ticketRequestDtos";
+import { ReservationPaymentOption, ReservationStatus, reservationStatusLabel } from "../models/reservationStatus";
 
 const formatDateTime = (value) =>
   new Intl.DateTimeFormat("en-GB", {
@@ -33,9 +32,9 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
       try {
         const [reservationsResponse, referenceData, ticketsResponse] =
           await Promise.all([
-            fetch(`${api}/api/reservations`, { headers: headers(accessToken) }),
-            getCinemaReferenceData(),
-            fetch(`${api}/api/tickets`, { headers: headers(accessToken) }),
+            reservationService.getAll(accessToken),
+            cinemaReferenceService.getAll(),
+            ticketService.getAll(accessToken),
           ]);
 
         if (!reservationsResponse.ok) throw new Error();
@@ -52,10 +51,7 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
         const customerIds = [...new Set(loadedReservations.map((item) => item.userId))];
         const customerResults = await Promise.allSettled(
           customerIds.map(async (customerId) => {
-            const response = await fetch(
-              `${api}/api/users/${customerId}/reservation-customer`,
-              { headers: headers(accessToken) },
-            );
+            const response = await userService.getReservationCustomer(customerId, accessToken);
             return [customerId, response.ok ? await response.json() : null];
           }),
         );
@@ -77,11 +73,10 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
   const sellForCash = async () => {
     if (!cashReservation) return;
 
-    const response = await fetch(`${api}/api/tickets/box-office`, {
-      method: "POST",
-      headers: { ...headers(accessToken), "Content-Type": "application/json" },
-      body: JSON.stringify({ reservationId: cashReservation.id }),
-    });
+    const response = await ticketService.purchaseAtBoxOffice(
+      toCashTicketRequestDto(cashReservation.id),
+      accessToken,
+    );
     const payload = await response.json().catch(() => ({}));
     setCashReservation(null);
 
@@ -148,15 +143,15 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
         <div className="management-list reservation-management-list">
           {visibleReservations.map((reservation) => {
             const { screening, movie, hall, customer } = reservationDetails(reservation);
-            const isCancelled = reservation.status === 3 || reservation.status === "Cancelled";
-            const isExpired = reservation.status === 4 || reservation.status === "Expired";
+            const isCancelled = reservation.status === ReservationStatus.Cancelled || reservation.status === "Cancelled";
+            const isExpired = reservation.status === ReservationStatus.Expired || reservation.status === "Expired";
             const ticket = tickets.find((item) => item.reservationId === reservation.id);
 
             return (
               <article className="manage-card reservation-management-card" key={reservation.id}>
                 <div>
                   <p className="eyebrow">
-                    {isCancelled ? "CANCELLED" : isExpired ? "EXPIRED" : reservation.status === 2 ? "CONFIRMED" : "ACTIVE RESERVATION"}
+                    {isCancelled ? "CANCELLED" : isExpired ? "EXPIRED" : reservation.status === ReservationStatus.Confirmed ? reservationStatusLabel(reservation.status) : "ACTIVE RESERVATION"}
                   </p>
                   <h2>{movie?.title ?? "Unknown movie"}</h2>
                   <p>
@@ -183,7 +178,7 @@ export default function ReservationManagementPage({ accessToken, onBack }) {
                   <strong className="ticket-passed">Reservation expired</strong>
                 ) : ticket ? (
                   <span className="ticket-purchased">Ticket issued</span>
-                ) : reservation.paymentOption === 1 ? (
+                ) : reservation.paymentOption === ReservationPaymentOption.CashAtBoxOffice ? (
                   <button className="submit-button" onClick={() => setCashReservation(reservation)}>
                     Sell for cash
                   </button>
