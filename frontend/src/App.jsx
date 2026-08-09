@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AiSupportChat from "./components/AiSupportChat";
 import AppHeader from "./components/AppHeader";
 import AppRoutes from "./components/AppRoutes";
+import ThemeToggle from "./components/ThemeToggle";
 import { useAuth } from "./context/AuthContext";
 import { useAppRoute } from "./hooks/useAppRoute";
 import { useGatewayInstance } from "./hooks/useGatewayInstance";
@@ -147,6 +148,7 @@ export default function App() {
         handleAuthenticated={handleAuthenticated}
       />
       {apiUrl && <AiSupportChat />}
+      <ThemeToggle />
     </main>
   );
 }
