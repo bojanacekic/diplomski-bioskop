@@ -22,7 +22,7 @@ Smart Cinema is a cinema information system built with a microservice architectu
 
 - Frontend: React 19 and Vite
 - Backend: ASP.NET Core 8 Web API
-- Database: Microsoft SQL Server Express
+- Database: Microsoft SQL Server 2025 / SQL Server Express
 - ORM and migrations: Entity Framework Core
 - Authentication and authorization: JWT
 - API routing: YARP Reverse Proxy
@@ -85,6 +85,35 @@ The script opens a separate PowerShell window for every application. Entity Fram
 Open [http://localhost:5173](http://localhost:5173).
 
 To stop an application, focus its PowerShell window and press `Ctrl + C`.
+
+## Run with Docker
+
+Docker Desktop can run the frontend, all backend services and SQL Server together.
+Create your local Docker environment file first:
+
+```powershell
+Copy-Item .env.docker.example .env.docker
+```
+
+Change `MSSQL_SA_PASSWORD` and `JWT_SECRET_KEY` in `.env.docker` before the first database
+startup, then start everything:
+
+```powershell
+docker compose --env-file .env.docker up --build
+```
+
+Open [http://localhost:5173](http://localhost:5173). The gateway is available at
+[http://localhost:5001](http://localhost:5001), while SQL Server is exposed on port `1433`.
+Database data is kept in the `smart-cinema-sqlserver-2025-data` Docker volume. Stop the application with
+`Ctrl + C`, or run `docker compose --env-file .env.docker down` from another terminal.
+
+Do not add `-v` to the `down` command unless you intentionally want to delete all Docker
+database data. Existing SQL Express data can be migrated with `COPY_ONLY` backups; keep the
+backup files until you have verified the Docker copy.
+
+LM Studio remains a host application. Start its local server and enable access from the
+local network; containers connect to it through `host.docker.internal`. SMTP values are
+optional for startup, but email features require valid credentials in `.env.docker`.
 
 ## Run individual applications
 

@@ -17,7 +17,11 @@ var connection =
     ?? builder.Configuration["ConnectionStrings__MoviesDatabase"]
     ?? throw new InvalidOperationException("ConnectionStrings__MoviesDatabase is not configured.");
 
-builder.WebHost.UseUrls(builder.Configuration["Movies__Url"] ?? "http://localhost:5002");
+builder.WebHost.UseUrls(
+    builder.Configuration["Movies:Url"]
+        ?? builder.Configuration["Movies__Url"]
+        ?? "http://localhost:5002"
+);
 var jwtIssuer =
     builder.Configuration["Jwt:Issuer"]
     ?? builder.Configuration["Jwt__Issuer"]

@@ -7,3 +7,8 @@ output/pdf/*-preview.pdf
 **/obj/
 frontend/dist/
 frontend/node_modules/
+
+# Local Docker secrets and overrides
+.env.docker
+compose.override.yaml
+docker-backups/

@@ -4,9 +4,18 @@ using System.Text.Json;
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
-var serviceUrl = builder.Configuration["AiSupport__Url"] ?? "http://localhost:5009";
-var lmStudioUrl = builder.Configuration["LmStudio__Url"] ?? "http://127.0.0.1:1234";
-var model = builder.Configuration["LmStudio__Model"] ?? "qwen3-4b-instruct-2507";
+var serviceUrl =
+    builder.Configuration["AiSupport:Url"]
+    ?? builder.Configuration["AiSupport__Url"]
+    ?? "http://localhost:5009";
+var lmStudioUrl =
+    builder.Configuration["LmStudio:Url"]
+    ?? builder.Configuration["LmStudio__Url"]
+    ?? "http://127.0.0.1:1234";
+var model =
+    builder.Configuration["LmStudio:Model"]
+    ?? builder.Configuration["LmStudio__Model"]
+    ?? "qwen3-4b-instruct-2507";
 const string systemPrompt = """
 You are the customer support assistant for Smart Cinema.
 Detect the language of every user message. Respond in English to English messages. Respond in Serbian to Serbian messages, using Latin or Cyrillic to match the user. If the language is unclear or mixed, respond in English.

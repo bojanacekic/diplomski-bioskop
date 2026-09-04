@@ -1,0 +1,199 @@
+x-backend-build: &backend-build
+  context: ./backend
+  dockerfile: Dockerfile
+
+x-common-environment: &common-environment
+  ASPNETCORE_ENVIRONMENT: Production
+  Cors__AllowedOrigin: http://localhost:5173
+  Jwt__Issuer: SmartCinema.Auth
+  Jwt__Audience: SmartCinema.Client
+  Jwt__SecretKey: ${JWT_SECRET_KEY:-replace-this-with-a-secret-at-least-32-characters-long}
+
+x-database-dependency: &database-dependency
+  sqlserver:
+    condition: service_healthy
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Express
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-SmartCinema_2026!Dev}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    restart: unless-stopped
+
+  auth:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: auth-microservice, PROJECT_FILE: AuthMicroservice.WebAPI.csproj, APP_DLL: AuthMicroservice.WebAPI.dll }
+    environment:
+      <<: *common-environment
+      Auth__Url: http://0.0.0.0:8080
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ConnectionStrings__AuthDatabase: Server=sqlserver,1433;Database=DiplomskiAuthDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-SmartCinema_2026!Dev};Encrypt=False;TrustServerCertificate=True;
+      Frontend__BaseUrl: http://localhost:5173
+      Smtp__Host: ${SMTP_HOST:-smtp.gmail.com}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__EnableSsl: ${SMTP_ENABLE_SSL:-true}
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__FromEmail: ${SMTP_FROM_EMAIL:-}
+      Smtp__FromName: ${SMTP_FROM_NAME:-Smart Cinema}
+    depends_on: *database-dependency
+    restart: unless-stopped
+
+  movies:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: movies-microservice, PROJECT_FILE: Movies.WebAPI.csproj, APP_DLL: Movies.WebAPI.dll }
+    environment:
+      <<: *common-environment
+      Movies__Url: http://0.0.0.0:8080
+      ConnectionStrings__MoviesDatabase: Server=sqlserver,1433;Database=DiplomskiMoviesDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-SmartCinema_2026!Dev};Encrypt=False;TrustServerCertificate=True;
+    depends_on: *database-dependency
+    restart: unless-stopped
+
+  halls:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: hall-management-microservice, PROJECT_FILE: Halls.WebAPI.csproj, APP_DLL: Halls.WebAPI.dll }
+    environment:
+      <<: *common-environment
+      Halls__Url: http://0.0.0.0:8080
+      ConnectionStrings__HallsDatabase: Server=sqlserver,1433;Database=DiplomskiHallsDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-SmartCinema_2026!Dev};Encrypt=False;TrustServerCertificate=True;
+      Services__ScreeningsBaseUrl: http://screenings:8080
+    depends_on: *database-dependency
+    restart: unless-stopped
+
+  screenings:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: screenings-microservice, PROJECT_FILE: Screenings.WebAPI.csproj, APP_DLL: Screenings.WebAPI.dll }
+    environment:
+      <<: *common-environment
+      Screenings__Url: http://0.0.0.0:8080
+      ConnectionStrings__ScreeningsDatabase: Server=sqlserver,1433;Database=DiplomskiScreeningsDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-SmartCinema_2026!Dev};Encrypt=False;TrustServerCertificate=True;
+      Services__GatewayBaseUrl: http://gateway:8080
+    depends_on: *database-dependency
+    restart: unless-stopped
+
+  reservations:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: reservations-microservice, PROJECT_FILE: Reservations.WebAPI.csproj, APP_DLL: Reservations.WebAPI.dll }
+    environment:
+      <<: *common-environment
+      Reservations__Url: http://0.0.0.0:8080
+      ConnectionStrings__ReservationsDatabase: Server=sqlserver,1433;Database=DiplomskiReservationsDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-SmartCinema_2026!Dev};Encrypt=False;TrustServerCertificate=True;
+      Services__GatewayBaseUrl: http://gateway:8080
+      Smtp__Host: ${SMTP_HOST:-smtp.gmail.com}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__EnableSsl: ${SMTP_ENABLE_SSL:-true}
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__FromEmail: ${SMTP_FROM_EMAIL:-}
+      Smtp__FromName: ${SMTP_FROM_NAME:-Smart Cinema}
+    depends_on: *database-dependency
+    restart: unless-stopped
+
+  tickets:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: ticket-purchases-microservice, PROJECT_FILE: TicketPurchases.WebAPI.csproj, APP_DLL: TicketPurchases.WebAPI.dll }
+    environment:
+      <<: *common-environment
+      Tickets__Url: http://0.0.0.0:8080
+      ConnectionStrings__TicketsDatabase: Server=sqlserver,1433;Database=DiplomskiTicketsDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-SmartCinema_2026!Dev};Encrypt=False;TrustServerCertificate=True;
+      Services__GatewayBaseUrl: http://gateway:8080
+    depends_on: *database-dependency
+    restart: unless-stopped
+
+  payments:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: payments-microservice, PROJECT_FILE: Payments.WebAPI.csproj, APP_DLL: Payments.WebAPI.dll }
+    environment:
+      <<: *common-environment
+      Payments__Url: http://0.0.0.0:8080
+      ConnectionStrings__PaymentsDatabase: Server=sqlserver,1433;Database=DiplomskiPaymentsDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-SmartCinema_2026!Dev};Encrypt=False;TrustServerCertificate=True;
+    depends_on: *database-dependency
+    restart: unless-stopped
+
+  ratings:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: ratings-recommendations-microservice, PROJECT_FILE: RatingsRecommendations.WebAPI.csproj, APP_DLL: RatingsRecommendations.WebAPI.dll }
+    environment:
+      <<: *common-environment
+      RatingsRecommendations__Url: http://0.0.0.0:8080
+      ConnectionStrings__RatingsRecommendationsDatabase: Server=sqlserver,1433;Database=DiplomskiRatingsRecommendationsDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-SmartCinema_2026!Dev};Encrypt=False;TrustServerCertificate=True;
+      Services__GatewayBaseUrl: http://gateway:8080
+    depends_on: *database-dependency
+    restart: unless-stopped
+
+  ai-support:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: ai-support-microservice, PROJECT_FILE: AiSupport.WebAPI.csproj, APP_DLL: AiSupport.WebAPI.dll }
+    environment:
+      AiSupport__Url: http://0.0.0.0:8080
+      LmStudio__Url: ${LM_STUDIO_URL:-http://host.docker.internal:1234}
+      LmStudio__Model: ${LM_STUDIO_MODEL:-qwen3-4b-instruct-2507}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  gateway:
+    build:
+      <<: *backend-build
+      args: { SERVICE_DIR: gateway-api, PROJECT_FILE: GatewayApi.WebAPI.csproj, APP_DLL: GatewayApi.WebAPI.dll }
+    environment:
+      Gateway__Url: http://0.0.0.0:8080
+      Cors__AllowedOrigin: http://localhost:5173
+      Services__AuthBaseUrl: http://auth:8080
+      Services__MoviesBaseUrl: http://movies:8080
+      Services__HallsBaseUrl: http://halls:8080
+      Services__ScreeningsBaseUrl: http://screenings:8080
+      Services__ReservationsBaseUrl: http://reservations:8080
+      Services__TicketsBaseUrl: http://tickets:8080
+      Services__PaymentsBaseUrl: http://payments:8080
+      Services__RatingsRecommendationsBaseUrl: http://ratings:8080
+      Services__AiSupportBaseUrl: http://ai-support:8080
+    ports:
+      - "5001:8080"
+    depends_on:
+      - auth
+      - movies
+      - halls
+      - screenings
+      - reservations
+      - tickets
+      - payments
+      - ratings
+      - ai-support
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_GATEWAY_URL: http://localhost:5001
+    ports:
+      - "5173:80"
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
+    name: smart-cinema-sqlserver-2025-data
